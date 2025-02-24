@@ -1,0 +1,1096 @@
+
+###############################
+#####    chromo class    ######
+###############################
+
+setClass(
+  Class = "Chromo",
+  slots = list(
+    data = "data.frame",
+    columns = "ANY",
+    classification = "ANY",
+    genome = "ANY",
+    composition = "ANY",
+    density = "ANY",
+    ora = "ANY",
+    interactions = "ANY"
+  )
+)
+
+
+################################
+#####    chromoInitiate    #####
+################################
+
+chromoInitiate <- function(
+    DEdf,
+    pval_cutoff = 0.05,
+    log2fc_cutoff = 1,
+    gene_col,
+    fc_col,
+    p_col,
+    transcript_type = c("Mt_tRNA","Mt_rRNA","protein_coding","lncRNA","snRNA","rRNA","pseudogene","misc_RNA","processed_pseudogene",
+                        "transcribed_unprocessed_pseudogene","rRNA_pseudogene","unprocessed_pseudogene","TEC","miRNA","transcribed_processed_pseudogene",
+                        "snoRNA","unitary_pseudogene","transcribed_unitary_pseudogene","sRNA","IG_V_gene","IG_C_pseudogene","TR_J_gene",
+                        "TR_V_gene","TR_J_pseudogene","TR_D_gene","TR_C_gene","IG_V_pseudogene","scaRNA","ribozyme","artifact","IG_C_gene",
+                        "IG_J_gene","IG_J_pseudogene","IG_D_gene","translated_processed_pseudogene","TR_V_pseudogene","IG_pseudogene","vault_RNA","scRNA")
+){
+
+  all_features <- read.delim(system.file("extdata", "hsapiens_gene_ensembl.tsv", package = "chromo")) # from Ensembl
+  cytobands <- read.delim(system.file("extdata", "hsapiens_cytogenicbands.tsv", package = "chromo")) # from UCSC's table browser
+
+  chromoObject <- new("Chromo", genome = list(inp_annot = "hsapiens", cytobands = cytobands))
+
+  # Filter and annotate
+  all_features <- all_features %>%
+    dplyr::filter(
+      complete.cases(.),
+      gene_biotype %in% transcript_type,
+      chromosome_name %in% c(as.character(seq(1, 22)), "X", "Y"),
+      !duplicated(external_gene_name) | !duplicated(external_gene_name, fromLast = TRUE)
+    ) %>%
+    dplyr::mutate(
+      chromosome_name = factor(chromosome_name, levels = c(as.character(seq(1, 22)), "X", "Y")),
+      gene_length = end_position - start_position,
+      avg_position = (end_position + start_position)/2
+    )
+
+  DEdf <- DEdf %>%
+    dplyr::left_join(all_features, by = stats::setNames("external_gene_name", gene_col)) %>%
+    dplyr::filter(complete.cases(.)) %>%
+    dplyr::mutate(
+      DEG = dplyr::case_when(
+        !!rlang::sym(fc_col) > log2fc_cutoff & !!rlang::sym(p_col) < pval_cutoff ~ "UP",
+        !!rlang::sym(fc_col) < -log2fc_cutoff & !!rlang::sym(p_col) < pval_cutoff ~ "DOWN",
+        TRUE ~ "NO"
+      )
+    ) %>%
+    dplyr::filter(!duplicated(!!rlang::sym(gene_col))) %>%
+    dplyr::arrange(chromosome_name, start_position)
+
+  chromoObject@columns <- list(
+    gene_col = gene_col,
+    fc_col = fc_col,
+    p_col = p_col,
+    chromosome = "chromosome_name",
+    start_position = "start_position",
+    end_position = "end_position",
+    avg_position = "avg_position",
+    gene_length = "gene_length",
+    DEG = "DEG"
+  )
+  chromoObject@classification <- list(
+    pval_cutoff = pval_cutoff,
+    log2fc_cutoff = log2fc_cutoff
+  )
+  chromoObject@data <- DEdf
+
+  return(chromoObject)
+}
+
+
+###################################
+#####    chromoReclassify    ######
+###################################
+
+chromoReclassify <- function(
+    chromoObject,
+    pval_cutoff = 0.05,
+    log2fc_cutoff = 1
+){
+  chromoObject@data <- chromoObject@data %>%
+    mutate(
+      DEG = case_when(
+        !!sym(chromoObject@columns$fc_col) > log2fc_cutoff & !!sym(chromoObject@columns$p_col) < pval_cutoff ~ "UP",
+        !!sym(chromoObject@columns$fc_col) < -log2fc_cutoff & !!sym(chromoObject@columns$p_col) < pval_cutoff ~ "DOWN",
+        TRUE ~ "NO"
+      )
+    )
+
+  chromoObject@classification <- list(pval_cutoff = pval_cutoff, log2fc_cutoff = log2fc_cutoff)
+
+  return(chromoObject)
+}
+
+
+###################################
+###      chromo Composition     ###
+###################################
+
+chromoComposition <- function(
+    chromoObject,
+    separate_by = "chromosome_name", #separate group
+    only_expr_features = F,
+    pct_expr_cols = c("pct.1", "pct.2"), # seurat
+    score_method = "pct", # "pct" or "hyp" or "hyp_padj"
+    padj_method = "BH" # existing params of p.adjust() function # only if using "hyp_padj"
+){
+
+  aux <- chromoObject@data %>%
+    {if (only_expr_features) filter(., !!sym(pct_expr_cols[[1]]) + !!sym(pct_expr_cols[[2]]) != 0) else .}
+
+  if(score_method == "pct"){
+    compo_df <- aux %>%
+      group_by(!!sym(separate_by), DEG) %>%
+      summarise(total = n()) %>%
+      group_by(!!sym(separate_by)) %>%
+      mutate(
+        compo = (total / sum(total)) * 100
+      ) %>%
+      ungroup() %>%
+      filter(
+        DEG != "NO"
+      )
+
+  }else if(score_method %in% c("hyp","hyp_padj")){
+    compo_df <- aux %>%
+      group_by(!!sym(separate_by), DEG) %>%
+      summarise(total = n())
+
+    totals <- list()
+    totals$UP <- aux %>% filter(DEG == "UP") %>% nrow()
+    totals$DOWN <- aux %>% filter(DEG == "DOWN") %>% nrow()
+    totals$NO <- aux %>% filter(DEG == "NO") %>% nrow()
+
+    # hypergeometric test
+    compo_df$compo <- apply(compo_df, 1, function(x){
+      phyper(
+        as.numeric(x["total"]) - 1,
+        totals[[x["DEG"]]],
+        nrow(aux) - totals[[x["DEG"]]],
+        sum(compo_df$total[compo_df[[separate_by]] == x[separate_by]]),
+        lower.tail = FALSE
+      )
+    })
+
+    compo_df <- compo_df %>%
+      filter(DEG != "NO")
+
+    if(score_method == "hyp_padj"){
+      compo_df$compo <- p.adjust(compo_df$compo, method = padj_method)
+    }
+  }
+
+  chromoObject@composition <- list(
+    compo_df = compo_df,
+    separate_by = separate_by,
+    only_expr_features = only_expr_features,
+    score_method = score_method
+  )
+
+  if (score_method == "hyp_padj") {
+    chromoObject@composition$padj_method <- padj_method
+  }
+  if(only_expr_features){
+    chromoObject@columns$pct_expr_cols <- pct_expr_cols
+  }
+
+  return(chromoObject)
+}
+
+
+#######################################
+###      chromo Composition Plot    ###
+#######################################
+
+chromoCompositionPlot <- function(
+    chromoObject,
+    highlight_features = "top_by_separator", # "top_by_separator", "top_overall" or a list of names
+    show_if_not_deg = T, # only if providing a list of names
+    n_top_features = 1, # only if using "top_by_separator" or "top_overall"
+    fc_line = T,
+    title_xaxis = "Chromosome",
+    title_yaxis = "Log2 fold change",
+
+    color_dot_down = "#3771c8aa",
+    color_dot_up = "#ff2200aa",
+    color_dot_no = "#dddddd33",
+    color_bar_down = "#3771c866",
+    color_bar_up = "#ff220066",
+    color_gene_name_down = "#2D5EAA",
+    color_gene_name_up = "#aa0000",
+    color_gene_name_no = "#555555",
+    color_score_down = "#2D5EAA",
+    color_score_up = "#aa0000",
+    color_line_up = "#aa0000",
+    color_line_down = "#2D5EAA",
+    color_xaxis_text = "black",
+    color_xaxis_label = "black",
+    color_yaxis_text = "black",
+    color_yaxis_label = "black",
+
+    size_dot_alt = 1.2,
+    size_dot_no = 0.8,
+    size_bar = 0.8,
+    size_gene_name = 3.2,
+    size_score = ifelse(chromoObject@composition$score_method %in% c("hyp", "hyp_padj"), 7, 4),
+    size_line = 0.4,
+    size_xaxis_text = 14,
+    size_xaxis_label = 12,
+    size_yaxis_text = 12,
+    size_yaxis_label = 12,
+
+    style_gene_name = "plain",
+    style_score = "bold",
+    style_line = 2, # 1 - continuous, 2- dashed, 3 - dotted, etc.
+    style_xaxis_text = "bold",
+    style_xaxis_label = "plain",
+    style_yaxis_text = "bold",
+    style_yaxis_label = "plain"
+){
+
+  gene_col <- chromoObject@columns$gene_col
+  fc_col <- chromoObject@columns$fc_col
+  separate_by <- chromoObject@composition$separate_by
+  compo_df <- chromoObject@composition$compo_df
+  pct_expr_cols <- chromoObject@columns$pct_expr_cols
+
+  if(!is.null(chromoObject@composition)){
+
+    aux <- chromoObject@data %>%
+      {if (chromoObject@composition$only_expr_features) filter(., !!sym(pct_expr_cols[[1]]) + !!sym(pct_expr_cols[[2]]) != 0) else .}
+
+    compo_df <- compo_df %>%
+      mutate(
+        compo = case_when(
+          chromoObject@composition$score_method %in% c("hyp","hyp_padj") ~ -log10(compo),
+          TRUE ~ compo
+        )
+      )
+
+    max_compo <- max(compo_df$compo, na.rm = T)
+
+    compo_df <- compo_df %>%
+      mutate(
+        proportion = (compo/max_compo * (max(abs(aux[[fc_col]])))),
+        proportion = case_when(
+          DEG == "UP" ~ proportion,
+          DEG == "DOWN" ~ -proportion,
+          TRUE ~ proportion
+        ),
+        compo = case_when(
+          chromoObject@composition$score_method %in% c("hyp","hyp_padj") ~ ifelse(compo > -log10(0.001),"***",ifelse(compo > -log10(0.01),"**",ifelse(compo > -log10(0.05),"*",""))),
+          TRUE ~ paste0(round(compo, 1), "%")
+        ),
+        y_axis = case_when(
+          DEG == "UP" ~ 1.2 * max(aux[[fc_col]]),
+          DEG == "DOWN" ~ 1.2 * min(aux[[fc_col]]),
+          TRUE ~ NA
+        ),
+        color = case_when(
+          DEG == "UP" ~ color_score_up,
+          DEG == "DOWN" ~ color_score_down,
+          TRUE ~ NA
+        )
+      )
+
+    # highlight features
+    if(highlight_features %in% c("top_by_separator", "top_overall")){
+      max_genes <- aux %>%
+        filter(DEG == "UP") %>%
+        { if (highlight_features == "top_by_separator") group_by(., !!sym(separate_by)) else . } %>%
+        slice_max(order_by = !!sym(fc_col), n = n_top_features, with_ties = FALSE) %>%
+        { if (highlight_features == "top_by_separator") ungroup(.) else . } %>%
+        dplyr::select(!!sym(gene_col), !!sym(separate_by))
+
+      min_genes <- aux %>%
+        filter(DEG == "DOWN") %>%
+        { if (highlight_features == "top_by_separator") group_by(., !!sym(separate_by)) else . } %>%
+        slice_min(order_by = !!sym(fc_col), n = n_top_features, with_ties = FALSE) %>%
+        { if (highlight_features == "top_by_separator") ungroup(.) else . } %>%
+        dplyr::select(!!sym(gene_col), !!sym(separate_by))
+
+      hlf <- rbind(max_genes, min_genes) %>%
+        mutate(gene_sep = paste0(!!sym(gene_col), "_", !!sym(separate_by))) %>%
+        pull(gene_sep)
+    }else{
+      hlf <- highlight_features
+    }
+
+    local_aux <- aux %>%
+      mutate(
+        highlight = case_when(
+          highlight_features %in% c("top_by_separator", "top_overall") & paste0(!!sym(gene_col), "_", !!sym(separate_by)) %in% hlf ~ !!sym(gene_col),
+          !highlight_features %in% c("top_by_separator", "top_overall") & show_if_not_deg & !!sym(gene_col) %in% hlf ~ !!sym(gene_col),
+          !highlight_features %in% c("top_by_separator", "top_overall") & !show_if_not_deg & !!sym(gene_col) %in% hlf & DEG %in% c("UP", "DOWN") ~ !!sym(gene_col),
+          TRUE ~ NA
+        ),
+        color = case_when(
+          !is.na(highlight) & DEG == "UP" ~ color_gene_name_up,
+          !is.na(highlight) & DEG == "DOWN" ~ color_gene_name_down,
+          !is.na(highlight) & DEG == "NO" ~ color_gene_name_no,
+          TRUE ~ NA
+        )
+      )
+
+    set.seed(42) # gene name position
+
+    deg_plot <- ggplot()+
+      geom_bar(
+        data = compo_df,
+        aes(x = !!sym(separate_by), y = proportion, fill = DEG),
+        stat = "identity",
+        width = size_bar
+      ) +
+      scale_fill_manual(values = c("UP" = color_bar_up, "DOWN" = color_bar_down))
+
+    if(fc_line){
+      deg_plot <- deg_plot +
+        geom_hline(yintercept = chromoObject@classification$log2fc_cutoff, color = color_line_up, size = size_line, linetype = style_line) +
+        geom_hline(yintercept = -chromoObject@classification$log2fc_cutoff, color = color_line_down, size = size_line, linetype = style_line)
+    }
+
+    deg_plot <- deg_plot +
+      geom_jitter( # not DEGs
+        data = local_aux %>% filter(DEG == "NO"),
+        aes(x = !!sym(separate_by), y = !!sym(fc_col), color = DEG),
+        position = position_jitterdodge(
+          jitter.width = 0.4,
+          jitter.height = 0,
+          dodge.width = 0,
+          seed = 42
+        ),
+        size = size_dot_no
+      )+
+      geom_jitter( # DEGs
+        data = local_aux %>% filter(DEG %in% c("UP", "DOWN")),
+        aes(x = !!sym(separate_by), y = !!sym(fc_col), color = DEG),
+        position = position_jitterdodge(
+          jitter.width = 0.4,
+          jitter.height = 0,
+          dodge.width = 0,
+          seed = 42
+        ),
+        size = size_dot_alt
+      )+
+      labs(
+        x = title_xaxis,
+        y = title_yaxis
+      )+
+      scale_color_manual(values = c("DOWN" = color_dot_down, "NO" = color_dot_no, "UP" = color_dot_up)) +
+      theme(
+        panel.background = element_rect(fill = "white"),
+        panel.grid = element_blank(),
+        axis.text.x = element_text(color = color_xaxis_text, size = size_xaxis_text, face = style_xaxis_text),
+        axis.title.x = element_text(color = color_xaxis_label, size = size_xaxis_label, face = style_xaxis_label),
+        axis.text.y = element_text(color = color_yaxis_text, size = size_yaxis_text, face = style_yaxis_text),
+        axis.title.y = element_text(color = color_yaxis_label, size = size_yaxis_label, face = style_yaxis_label),
+        legend.position = "none"
+      )+
+      geom_text_repel(
+        data = local_aux,
+        aes(x = !!sym(separate_by), y = !!sym(fc_col), color = DEG, label = highlight),
+        max.overlaps = Inf,
+        color = local_aux$color,
+        size = size_gene_name,
+        fontface = style_gene_name
+      ) +
+      annotate( #score
+        geom = "text",
+        x = compo_df[[separate_by]],
+        y = compo_df$y_axis,
+        label = compo_df$compo,
+        color = compo_df$color,
+        size = size_score,
+        fontface = style_score
+      )
+
+    return(deg_plot)
+
+  }else{
+    stop("Run chromoComposition first!")
+  }
+}
+
+
+#################################
+#####    chromo Density    ######
+#################################
+
+chromoDensity <- function(
+    chromoObject,
+    bandwidth = "nrd0",
+    cluster_threshold = 20, # 20%
+    DEG_type = list("UP", "DOWN"), # c("UP", "DOWN"), "UP, "DOWN"
+    padj_method = "none" # c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", fdr", "none")
+){
+
+  calculate_density <- function(subset, chro) {
+    dens <- density(
+      subset[[avg_position]],
+      kernel = "gaussian",
+      from = 1,
+      to = max(cytobands[cytobands$chr == chro,"baseEnd"]),
+      bw = bandwidth
+    )
+    return(data.frame(x = dens$x, y = dens$y))
+  }
+
+  gene_col <- chromoObject@columns$gene_col
+  fc_col <- chromoObject@columns$fc_col
+  chromosome <- chromoObject@columns$chromosome
+  start_position <- chromoObject@columns$start_position
+  end_position <- chromoObject@columns$end_position
+  avg_position <- chromoObject@columns$avg_position
+  gene_length <- chromoObject@columns$gene_length
+  DEG <- chromoObject@columns$DEG
+  cytobands <- chromoObject@genome$cytobands
+
+  if(!is.list(DEG_type)){
+    DEG_type <- list(DEG_type)
+  }
+
+  # DEGs density
+  DEG_density <- chromoObject@data %>%
+    filter(!!sym(DEG) %in% DEG_type) %>%
+    group_by(!!sym(chromosome)) %>%
+    do({
+      dens_df <- calculate_density(., chro = unique(.data[[chromosome]]))
+      dens_df
+    }) %>%
+    mutate(
+      y = if_else(y < max(y)*(cluster_threshold/100), 0, y)
+    ) %>%
+    ungroup() %>%
+    mutate(!!sym(chromosome) := factor(!!sym(chromosome)))
+
+  # adding 0s on borders
+  for (i in levels(DEG_density[[chromosome]])) {
+    DEG_density <- DEG_density %>%
+      add_row(!!sym(chromosome) := i, x = 0, y = 0) %>%
+      add_row(!!sym(chromosome) := i, x = max(cytobands[cytobands$chr == i,"baseEnd"]), y = 0)
+  }
+
+  # ordering
+  DEG_density <- DEG_density %>%
+    mutate(!!sym(chromosome) := factor(!!sym(chromosome), levels = levels(chromoObject@data[[chromosome]]))) %>%
+    arrange(!!sym(chromosome), x)
+
+  # Clustering
+  DEG_clusters <- DEG_density[DEG_density$y != 0 | (DEG_density$y == 0 & (c(TRUE, DEG_density$y[-length(DEG_density$y)] != 0) | c(DEG_density$y[-1] != 0, TRUE))), , drop = FALSE]
+  DEG_clusters <- as.data.frame(DEG_clusters)
+  if(DEG_clusters$y[1] == 0 & DEG_clusters$y[2] == 0){DEG_clusters <- DEG_clusters[-1,]}
+  if(DEG_clusters$y[nrow(DEG_clusters)] == 0 & DEG_clusters$y[nrow(DEG_clusters)-1] == 0){DEG_clusters <- DEG_clusters[-nrow(DEG_clusters),]}
+
+  # list
+  DEG_density_list <- list()
+  boundaries <- which(DEG_clusters$y == 0)
+  for (i in seq(1, length(boundaries), by=2)) {
+    DEG_density_list[[(i+1)/2]] <- DEG_clusters[boundaries[i]:boundaries[i + 1], ]
+  }
+
+  # remaking clusters df
+  DEG_clusters <- map2_dfr(DEG_density_list, seq_along(DEG_density_list), ~ {
+    df <- .x
+    cluster_num <- .y
+    data.frame(
+      chromosome = unique(df[[chromosome]]),
+      cluster_num = cluster_num,
+      end_position = max(df$x),
+      start_position = min(df$x)
+    )
+  }) %>%
+    mutate(size = end_position - start_position)
+
+  DEG_clusters$all_features <- NA
+  DEG_clusters$DEGs <- NA
+  for (i in 1:nrow(DEG_clusters)) {
+    DEG_clusters$all_features[i] <- chromoObject@data %>%
+      filter(!!sym(chromosome) == DEG_clusters$chromosome[i], !!sym(avg_position) < DEG_clusters$end_position[i], !!sym(avg_position) > DEG_clusters$start_position[i]) %>%
+      pull(!!sym(gene_col)) %>%
+      paste(collapse = ";")
+    DEG_clusters$DEGs[i] <- chromoObject@data %>%
+      filter(!!sym(DEG) %in% DEG_type) %>%
+      filter(!!sym(chromosome) == DEG_clusters$chromosome[i], !!sym(avg_position) < DEG_clusters$end_position[i], !!sym(avg_position) > DEG_clusters$start_position[i]) %>%
+      pull(!!sym(gene_col)) %>%
+      paste(collapse = ";")
+  }
+
+  DEG_clusters <- DEG_clusters %>%
+    mutate(
+      n_features = str_count(all_features, ";") + 1,
+      n_DEG = str_count(DEGs, ";") + 1
+    )
+
+  # Hypergeometric test
+  total_DEG <- chromoObject@data %>% filter(!!sym(DEG) %in% DEG_type) %>% nrow()
+  total_no_DEG <- chromoObject@data %>% filter(!!sym(DEG) == "NO") %>% nrow()
+
+  DEG_clusters$pval <- apply(DEG_clusters, 1, function(x){
+    phyper(
+      as.numeric(x[["n_DEG"]]) - 1,
+      total_DEG,
+      total_no_DEG,
+      as.numeric(x[["n_features"]]),
+      lower.tail = FALSE
+    )
+  })
+
+  # padj and score
+  DEG_clusters <- DEG_clusters %>%
+    mutate(
+      pval = p.adjust(DEG_clusters$pval, method = padj_method),
+      score = -log10(pval)
+    ) %>%
+    arrange(-score) %>%
+    mutate(
+      cluster_num = seq(1,nrow(DEG_clusters))
+    )
+
+  # removing clusters with only 1 DEG
+  DEG_clusters <- DEG_clusters %>%
+    filter(n_DEG > 1)
+
+  # Bands affected by each cluster
+  DEG_clusters <- DEG_clusters %>%
+    rowwise() %>%
+    mutate(
+      bands = {
+        chr_val   <- as.character(.data[["chromosome"]])
+        start_val <- as.numeric(.data[[start_position]])
+        end_val   <- as.numeric(.data[[end_position]])
+
+        aux <- cytobands %>%
+          filter(
+            chr == chr_val,
+            (baseStart <= end_val & baseStart >= start_val) |
+              (baseEnd <= end_val & baseEnd >= start_val) |
+              (baseStart <= start_val & baseEnd >= end_val)
+          )
+
+        paste(aux$band, collapse = ";")
+      }
+    ) %>%
+    ungroup()
+
+  chromoObject@density[[paste(DEG_type, collapse = ifelse(length(DEG_type) > 1, "_", ""))]] = list(
+    DEG_clusters = DEG_clusters,
+    bandwidth = bandwidth,
+    threshold = cluster_threshold,
+    padj_method = padj_method
+  )
+
+  return(chromoObject)
+}
+
+
+#####################################
+#####    chromo Density Plot   ######
+#####################################
+
+chromoDensityPlot <- function(
+    chromoObject,
+    DEG_type = list("UP", "DOWN"), # list("UP", "DOWN"), "UP", "DOWN"
+    n_top_clusters = 10,
+    include_genes = F,
+    include_density = T,
+    all_chr = T,
+
+    color_enrich = "#990099",
+    color_enrich_up = "#dd2200",
+    color_enrich_down = "#0022dd"
+){
+
+  gene_col <- chromoObject@columns$gene_col
+  fc_col <- chromoObject@columns$fc_col
+  chromosome <- chromoObject@columns$chromosome
+  start_position <- chromoObject@columns$start_position
+  end_position <- chromoObject@columns$end_position
+  avg_position <- chromoObject@columns$avg_position
+  gene_length <- chromoObject@columns$gene_length
+  DEG <- chromoObject@columns$DEG
+  cytobands <- chromoObject@genome$cytobands
+
+  if(!is.list(DEG_type)){
+    DEG_type <- list(DEG_type)
+  }
+
+  density_type <- paste(DEG_type, collapse = ifelse(length(DEG_type) > 1, "_", ""))
+
+  plot_color <- ifelse(length(DEG_type) == 2, color_enrich, ifelse("UP" %in% DEG_type, color_enrich_up, color_enrich_down))
+
+  DEG_clusters <- chromoObject@density[[density_type]][["DEG_clusters"]]
+
+  # top clusters and bands to include
+  top_clusters <- DEG_clusters %>% arrange(-score) %>% head(n_top_clusters)
+
+  if(all_chr){
+    chr_with_clu <- c(as.character(seq(1,22)), "X", "Y")
+  }else{
+    chr_with_clu <- unique(top_clusters$chromosome)
+  }
+
+  bands_to_keep <- cytobands %>%
+    group_by(chr) %>%
+    summarize(
+      baseStart = min(baseStart),
+      baseEnd   = max(baseEnd),
+      .groups   = "drop"
+    ) %>%
+    mutate(
+      band = row_number()
+    ) %>%
+    rbind(cytobands %>% filter(sub("^[^_]*_", "", band) %in% c("p11.1", "p11", "q11.1", "q11")))
+
+  # plot
+  plots_list <- c()
+  for(i in 1:length(chr_with_clu)){
+
+    # plotting
+    plots_list[[i]] <- ggplot() +
+      labs(
+        title = NULL,
+        x = NULL,
+        y = paste0("chr", chr_with_clu[i])) +
+      theme_minimal() +
+      scale_y_continuous(expand = c(0, 0)) +
+      scale_x_continuous(expand = c(0, 0), limits = c(0, max(as.numeric(cytobands %>% filter(chr %in% chr_with_clu) %>% pull(baseEnd))))) +
+      coord_cartesian(clip = "off")+
+      theme(
+        plot.background = element_rect(fill = "white", color = NA),
+        panel.background = element_rect(fill = "white", color = NA),
+        panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(color = "black", linewidth = 0.5),
+        axis.title.y = element_text(face = "bold", size = 20, angle = 0, vjust = 0.5),
+        axis.text.y = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank()
+      )
+
+    if(include_density & chr_with_clu[i] %in% top_clusters$chromosome){
+
+      dens <- density(
+        chromoObject@data %>% filter(!!sym(chromosome) == chr_with_clu[i], DEG %in% DEG_type) %>% pull(avg_position),
+        kernel = "gaussian",
+        from = 1,
+        to = max(cytobands[cytobands$chr == chr_with_clu[i], "baseEnd"]),
+        bw = chromoObject@density[[density_type]]$bandwidth
+      )
+      dens_deg <- data.frame(x = dens$x, y_deg = dens$y) %>%
+        mutate(y_deg = y_deg/max(y_deg))
+
+      dens <- density(
+        chromoObject@data %>% filter(!!sym(chromosome) == chr_with_clu[i]) %>% pull(avg_position),
+        kernel = "gaussian",
+        from = 1,
+        to = max(cytobands[cytobands$chr == chr_with_clu[i], "baseEnd"]),
+        bw = chromoObject@density[[density_type]]$bandwidth
+      )
+      dens_all <- data.frame(x = dens$x, y_all = dens$y) %>%
+        mutate(y_all = y_all/max(y_all))
+
+      dens <- dens_deg %>%
+        left_join(dens_all, by = "x") %>%
+        mutate(
+          y = y_deg - y_all,
+          y = case_when(
+            y < 0 ~ 0,
+            TRUE ~ y
+          ),
+          y = 1.5*y/max(y)
+        ) %>%
+        add_row(x = 0, y = 0) %>%
+        add_row(x = max(cytobands[cytobands$chr == chr_with_clu[i], "baseEnd"]), y = 0) %>%
+        arrange(x)
+
+      plots_list[[i]] <- plots_list[[i]] +
+        geom_polygon(
+          data = dens,
+          aes(x = x, y = y),
+          color = plot_color,
+          linewidth = 0.5,
+          fill = paste0(plot_color, "77")
+        )
+    }
+
+    # fixes chr sizes
+    if(include_density & !(chr_with_clu[i] %in% top_clusters$chromosome)){
+      plots_list[[i]] <- plots_list[[i]] +
+        geom_segment(aes(x = 0, xend = 0, y = 0, yend = 1.5), alpha = 0)
+    }
+
+    if(include_genes){
+      plots_list[[i]] <- plots_list[[i]] +
+        geom_point( # not DEGs
+          data = chromoObject@data %>% filter(!!sym(chromosome) == chr_with_clu[i], !!sym(DEG) == "NO"),
+          aes(x = !!sym(avg_position)), y = 0.1, color = "#00000022"
+        ) +
+        geom_point( # DEGs
+          data = chromoObject@data %>% filter(!!sym(chromosome) == chr_with_clu[i], !!sym(DEG) %in% DEG_type),
+          aes(x = !!sym(avg_position)), y = 0.1, color = paste0(plot_color, "aa")
+        )
+    }
+
+    # cytogenetic bands
+    for (j in bands_to_keep[bands_to_keep$chr == chr_with_clu[i], "band", drop = TRUE]) {
+
+      plots_list[[i]] <- plots_list[[i]] +
+        annotate(
+          "rect",
+          xmin = bands_to_keep[bands_to_keep$band == j, "baseStart", drop = T],
+          xmax = bands_to_keep[bands_to_keep$band == j, "baseEnd", drop = T],
+          ymin = -1,
+          ymax = 0,
+          fill = ifelse(sub("^[^_]*_", "", j) %in% c("p11.1", "p11", "q11.1", "q11"), "black", "#ffffff"),
+          color = "black"
+        )
+    }
+
+    # clusters
+    for (j in top_clusters[top_clusters$chromosome == chr_with_clu[i], "cluster_num", drop = T]) {
+
+      plots_list[[i]] <- plots_list[[i]] +
+        annotate(
+          "rect",
+          xmin = top_clusters[top_clusters$cluster_num == j, "start_position", drop = T],
+          xmax = top_clusters[top_clusters$cluster_num == j, "end_position", drop = T],
+          ymin = -1,
+          ymax = 0,
+          fill = colorRampPalette(c("white", plot_color))(256)[
+            as.integer(rescale(
+              top_clusters[top_clusters$cluster_num == j, "score", drop = TRUE],
+              to = c(0, 1),
+              from = c(min(top_clusters$score), max(top_clusters$score))
+            ) * 255) + 1
+          ],
+          color = plot_color,
+          size = 0.8,
+          alpha = 0.8
+        )
+    }
+
+    # cluster name
+    for (j in top_clusters[top_clusters$chromosome == chr_with_clu[i], "cluster_num", drop = T]) {
+      plots_list[[i]] <- plots_list[[i]] +
+        annotate(
+          "text",
+          x = (top_clusters[top_clusters$cluster_num == j,"end_position", drop = T] + top_clusters[top_clusters$cluster_num == j,"start_position", drop = T])/2,
+          y = -0.5,
+          label = j,
+          color = "black",
+          size = 6,
+          fontface = "bold"
+        )
+    }
+  }
+
+  combined_plot <- purrr::reduce(plots_list, `/`)
+
+  return(combined_plot)
+}
+
+
+###############################
+#####     chromoZoom     ######
+###############################
+
+chromoZoom <- function(
+    chromoObject,
+    DEG_type = list("UP", "DOWN"), # list("UP", "DOWN"), "UP", "DOWN"
+    cluster = 1,
+
+    color_line_up = "#aa0000",
+    color_line_down = "#2D5EAA",
+    color_xaxis_text = "black",
+    color_xaxis_label = "black",
+    color_yaxis_text = "black",
+    color_yaxis_label = "black",
+
+    size_gene_name = 3,
+    size_line = 0.4,
+    size_xaxis_text = 12,
+    size_xaxis_label = 12,
+    size_yaxis_text = 12,
+    size_yaxis_label = 12,
+
+    style_gene_name = "bold",
+    style_line = 2, # 1 - continuous, 2- dashed, 3 - dotted, etc.
+    style_xaxis_text = "bold",
+    style_xaxis_label = "plain",
+    style_yaxis_text = "bold",
+    style_yaxis_label = "plain"
+){
+
+  gene_col <- chromoObject@columns$gene_col
+  fc_col <- chromoObject@columns$fc_col
+  chromosome <- chromoObject@columns$chromosome
+  start_position <- chromoObject@columns$start_position
+  end_position <- chromoObject@columns$end_position
+  avg_position <- chromoObject@columns$avg_position
+  gene_length <- chromoObject@columns$gene_length
+  DEG <- chromoObject@columns$DEG
+  cytobands <- chromoObject@genome$cytobands
+
+  custom_labels <- function(x) {
+    ifelse(x >= 1e9, paste0(round(x / 1e9, 2), " Gb"),
+           ifelse(x >= 1e6, paste0(round(x / 1e6, 2), " Mb"),
+                  ifelse(x >= 1e3, paste0(round(x / 1e3, 2), " kb"), as.character(x))))
+  }
+
+  DEdf <- chromoObject@data
+
+  if(!is.list(DEG_type)){
+    DEG_type <- list(DEG_type)
+  }
+
+  density_type <- paste(DEG_type, collapse = ifelse(length(DEG_type) > 1, "_", ""))
+
+  cluster_df <- chromoObject@density[[density_type]]$DEG_clusters %>% filter(cluster_num == cluster)
+
+  features_in_cluster <- unlist(strsplit(cluster_df[["all_features"]], ";"))
+  DEGs_in_cluster <- unlist(strsplit(cluster_df[["DEGs"]], ";"))
+  not_DEGs <- setdiff(features_in_cluster, DEGs_in_cluster)
+
+  # min and max log2fc
+  fc_vector <- DEdf %>% filter(!!sym(gene_col) %in% features_in_cluster) %>% pull(!!sym(fc_col))
+  max_fc <- max(fc_vector)
+  min_fc <- min(fc_vector)
+  size_adj <- (max_fc - min_fc)/30
+
+  zoom_plot <- ggplot() +
+    labs(
+      title = paste0(
+        "Density: ", density_type,
+        ", Cluster: ", cluster,
+        ", Chr", cluster_df[["chromosome"]],
+        ", ", custom_labels(cluster_df[["start_position"]]), " - ", custom_labels(cluster_df[["end_position"]])
+      ),
+      x = NULL,
+      y = "Log2 fold change"
+    ) +
+    scale_y_continuous(expand = c(0, 0), limits = c(min_fc - 4*size_adj, max_fc), breaks = seq(ceiling(min_fc), floor(max_fc), 1)) +
+    scale_x_continuous(expand = c(0, 0), labels = custom_labels) +
+    theme(
+      panel.background = element_rect(fill = "white"),
+      panel.grid = element_blank(),
+      axis.text.x = element_text(color = color_xaxis_text, size = size_xaxis_text, face = style_xaxis_text),
+      axis.title.x = element_text(color = color_xaxis_label, size = size_xaxis_label, face = style_xaxis_label),
+      axis.text.y = element_text(color = color_yaxis_text, size = size_yaxis_text, face = style_yaxis_text),
+      axis.title.y = element_text(color = color_yaxis_label, size = size_yaxis_label, face = style_yaxis_label),
+      legend.position = "none" # Remove legends
+    ) +
+    geom_vline(xintercept = cluster_df[["start_position"]], color = "#dddd00", size = size_line, linetype = style_line) +
+    geom_vline(xintercept = cluster_df[["end_position"]], color = "#dddd00", size = size_line, linetype = style_line) +
+    geom_hline(yintercept = chromoObject@classification$log2fc_cutoff, color = color_line_up, size = size_line, linetype = style_line) +
+    geom_hline(yintercept = -chromoObject@classification$log2fc_cutoff, color = color_line_down, size = size_line, linetype = style_line) +
+    geom_hline(yintercept = 0, color = "#444444", size = size_line, linetype = style_line)
+
+  # Bands
+  bands <- unlist(strsplit(cluster_df[["bands"]], ";"))
+  for(i in bands){
+    zoom_plot <- zoom_plot +
+      annotate(
+        "rect",
+        xmin = cytobands[cytobands$band == i, "baseStart"],
+        xmax = cytobands[cytobands$band == i, "baseEnd"],
+        ymin = min_fc - 4*size_adj,
+        ymax = min_fc - 1.5*size_adj,
+        fill = "#ffffff00",
+        color = "black"
+      ) +
+      annotate(
+        "text",
+        x = (cytobands[cytobands$band == i, "baseStart"] + cytobands[cytobands$band == i, "baseEnd"])/2,
+        y = min_fc - 2.75*size_adj,
+        label = sub("^[^_]*_", "", i),
+        color = "black",
+        size = 3.5,
+        fontface = "bold"
+      )
+  }
+
+  # not DEGs
+  for (i in not_DEGs){
+    zoom_plot <- zoom_plot +
+      annotate("rect",
+               xmin = DEdf[DEdf$Symbol == i,"start_position"],
+               xmax = DEdf[DEdf$Symbol == i,"end_position"],
+               ymin = DEdf[DEdf$Symbol == i,"log2FoldChange"] - size_adj,
+               ymax = DEdf[DEdf$Symbol == i,"log2FoldChange"],
+               fill = '#77777777'
+      )
+  }
+
+  # DEGs
+  for (i in DEGs_in_cluster){
+    zoom_plot <- zoom_plot +
+      annotate("rect",
+               xmin = DEdf[DEdf$Symbol == i,"start_position"],
+               xmax = DEdf[DEdf$Symbol == i,"end_position"],
+               ymin = DEdf[DEdf$Symbol == i,"log2FoldChange"] - size_adj,
+               ymax = DEdf[DEdf$Symbol == i,"log2FoldChange"],
+               fill = ifelse(DEdf[DEdf$Symbol == i,"DEG"] == "DOWN", "#0033ffaa", "#ff3300aa")
+      )
+  }
+
+  set.seed(42)
+
+  # gene name
+  zoom_plot <- zoom_plot +
+    geom_text_repel(
+      data = DEdf %>% filter(!!sym(gene_col) %in% DEGs_in_cluster),
+      aes(x = avg_position, y = log2FoldChange, label = Symbol, color = DEG),
+      hjust = 0.5,
+      vjust = 0.5,
+      size = size_gene_name,
+      fontface = style_gene_name,
+      inherit.aes = F
+    )+
+    scale_color_manual(values = c("DOWN" = "#002277", "UP" = "#772200"))
+
+  return(zoom_plot)
+}
+
+
+##############################
+######    chromo ORA   #######
+##############################
+
+chromoORA <- function(
+    chromoObject,
+    DEG_type = list("UP", "DOWN"), # list("UP", "DOWN"), "UP", "DOWN"
+    cluster = 1
+){
+
+  if(!is.list(DEG_type)){
+    DEG_type <- list(DEG_type)
+  }
+
+  density_type <- paste(DEG_type, collapse = ifelse(length(DEG_type) > 1, "_", ""))
+
+  DEGs_in_cluster <- chromoObject@density[[density_type]][["DEG_clusters"]] %>%
+    filter(cluster_num == cluster) %>%
+    pull(DEGs)
+  DEGs_in_cluster <- strsplit(DEGs_in_cluster, ";")[[1]]
+
+  aux <- enrichGO(
+    keyType = "SYMBOL",
+    gene = DEGs_in_cluster,
+    universe = chromoObject@data[, chromoObject@columns$gene_col, drop = T],
+    OrgDb = org.Hs.eg.db,
+    ont = "all",
+    pvalueCutoff = 0.05,
+    qvalueCutoff = 0.05,
+    readable = TRUE
+  )
+
+  chromoObject@ora[[density_type]][[cluster]] <- aux@result %>% mutate(score = -log10(p.adjust))
+
+  return(chromoObject)
+}
+
+
+###################################
+######    chromo ORA Plot   #######
+###################################
+
+chromoORAPlot <- function(
+    chromoObject,
+    DEG_type = list("UP", "DOWN"), # list("UP", "DOWN"), "UP", "DOWN"
+    cluster = 1,
+    number_of_onto = 5,
+    highlight = "ONTOLOGY",
+    color_list = c("CC" = "#FBB4AEaa", "MF"  = "#B3CDE3aa", "BP" = "#CCEBC5aa"),
+    text_size = 4,
+    title = paste0(DEG_type, "_cluster: ", cluster)
+){
+
+  if(!is.list(DEG_type)){
+    DEG_type <- list(DEG_type)
+  }
+
+  density_type <- paste(DEG_type, collapse = ifelse(length(DEG_type) > 1, "_", ""))
+
+  df <- chromoObject@ora[[density_type]][[cluster]] %>%
+    arrange(-score) %>%
+    head(number_of_onto)
+
+  df <- df %>%
+    mutate(
+      Description = factor(Description, levels = unique(df %>% arrange(score) %>% pull(Description)))
+    )
+
+  bar_plot <- ggplot(df) +
+    geom_col(
+      aes(x = score, y = Description, fill = !!sym(highlight)),
+      width = 0.6
+    ) +
+    geom_vline(
+      xintercept = -log10(0.05),
+      linetype = "dashed",
+      color = "#cc2222"
+    ) +
+    geom_vline(
+      xintercept = -log10(0.01),
+      linetype = "dashed",
+      color = "#cc2222"
+    ) +
+    geom_vline(
+      xintercept = -log10(0.001),
+      linetype = "dashed",
+      color = "#cc2222"
+    ) +
+    annotate(
+      "text",
+      x = -log10(0.05),
+      y = number_of_onto + 0.6,
+      label = "*",
+      color = "#cc2222",
+      size = 6
+    )+
+    annotate(
+      "text",
+      x = -log10(0.01),
+      y = number_of_onto + 0.6,
+      label = "**",
+      color = "#cc2222",
+      size = 6
+    )+
+    annotate(
+      "text",
+      x = -log10(0.001),
+      y = number_of_onto + 0.6,
+      label = "***",
+      color = "#cc2222",
+      size = 6
+    )+
+    labs(
+      title = title,
+      y = NULL,
+      x = expression("-log"[10]*"(padjust)")
+    ) +
+    scale_x_continuous(
+      limits = c(0, max(df$score)),
+      breaks = seq(0, max(df$score), by = 1),
+      expand = c(0, 0)
+    ) +
+    coord_cartesian(clip = "off") +
+    theme(
+      panel.background = element_rect(fill = "white"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.ticks.length = unit(0, "mm"),
+      axis.line.y.left = element_line(color = "black"),
+      axis.text = element_blank(),
+      axis.title.x = element_text(size = 12)
+    ) +
+    scale_fill_manual(
+      values = color_list
+    ) +
+    geom_text(
+      aes(0, y = Description, label = Description),
+      hjust = 0,
+      nudge_x = 0.05,
+      color = "black",
+      size = text_size
+    )
+
+  return(bar_plot)
+}
+
+
