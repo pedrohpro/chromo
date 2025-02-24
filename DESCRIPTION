@@ -3,7 +3,7 @@ Type: Package
 Title: Chromosome Annotation and Visualization
 Version: 1.1.0
 Authors@R: 
-    person("Pedro Henrique", "Prado de Oliveira", role = c("aut", "cre"))
+    person("Pedro Henrique", "Prado de Oliveira", email = "pedroh.proliveira@gmail.com", role = c("aut", "cre"))
 Description: Tools for chromosome annotation, gene expression visualization,
     chromatin accessibility analysis, and enrichment analysis.
 License: MIT
