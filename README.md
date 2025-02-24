@@ -1,1 +1,1 @@
-![Alt Text](logo_chromo.png)
+![](logo_chromo.jpg)
