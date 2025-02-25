@@ -1,4 +1,26 @@
 
+#######################################
+#####    chromo Documentation    ######
+#######################################
+
+chromoDocumentation <- function() {
+  file <- system.file("doc", "documentation.pdf", package = "chromo")
+  if (file == "") stop("Documentation PDF not found. Try reinstalling the package.")
+  utils::browseURL(file)
+}
+
+
+#################################
+#####    chromo Vignette   ######
+#################################
+
+chromoVignette <- function() {
+  file <- system.file("doc", "vignette.pdf", package = "chromo")
+  if (file == "") stop("Vignette PDF not found. Try reinstalling the package.")
+  utils::browseURL(file)
+}
+
+
 ###############################
 #####    chromo class    ######
 ###############################

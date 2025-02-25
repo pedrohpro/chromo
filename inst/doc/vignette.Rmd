@@ -1,0 +1,169 @@
+---
+title: "vignette"
+output: html_document
+date: "2025-02-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# chromo vignette
+
+## Compiled: February 25, 2025
+
+# Installation
+
+```{r}
+# remotes::install_github("pedrohpro/chromo")
+```
+
+# Dependencies
+
+```{r}
+library(tidyverse) # do it all
+library(patchwork) # for chromoDensityPlot
+library(clusterProfiler) # for chromoORA
+library(org.Hs.eg.db) # for chromoORA
+library(ggrepel) # for chromoCompositionPlot
+library(scales) # for plots
+library(chromo)
+```
+
+# Initialise chromo object
+
+In this tutorial we will use the differential expression table obtained comparing bulk RNA-seq PBMC samples from Down Syndrome (DS) patients against control (CT) patients. The data comes from the Human Trisome Project run by the Linda Crnic Institute for Down Syndrome at the University of Colorado Anschutz Medical Campus with NCBI GEO access code: GSE190125. The study sequenced 304 DS individuals and 96 CT individuals.
+
+```{r}
+df <- read.delim(
+  file = system.file("doc", "GSE190125_DS.tsv", package = "chromo")
+) # import differential expression data frame
+
+chrObj <- chromoInitiate(DEdf = df, gene_col = "Symbol", fc_col = "log2FoldChange", p_col = "padj")
+```
+
+# Composition
+
+```{r}
+chrObj <- chromoComposition(chrObj)
+chrScatterPLot <- chromoCompositionPlot(chrObj)
+head(chrObj@composition[["compo_df"]])
+```
+
+```{r}
+plot(chrScatterPLot)
+```
+
+You can also easily test different p-value and log2fc tresholds with chromoReclassify. 
+(Default values are p=0.05 and log2fc = 1)
+```{r}
+chrObj <- chromoReclassify(chrObj, pval_cutoff = 0.01, log2fc_cutoff = 0.5)
+chrObj <- chromoComposition(chrObj)
+chrScatterPLot <- chromoCompositionPlot(chrObj)
+head(chrObj@composition[["compo_df"]])
+```
+
+```{r}
+plot(chrScatterPLot)
+```
+
+You can also easily test different enrichment types. 
+(Default enrichment is by percentage)
+```{r}
+chrObj <- chromoReclassify(chrObj, pval_cutoff = 0.05, log2fc_cutoff = 1)
+chrObj <- chromoComposition(chrObj, score_method = "hyp")
+chrScatterPLot <- chromoCompositionPlot(chrObj)
+head(chrObj@composition[["compo_df"]])
+```
+
+```{r}
+plot(chrScatterPLot)
+```
+
+# Density
+
+```{r}
+chrObj <- chromoDensity(chrObj, bandwidth = 5e6, cluster_threshold = 20, DEG_type = "UP")
+chrObj <- chromoDensity(chrObj, bandwidth = 5e6, cluster_threshold = 20, DEG_type = "DOWN")
+chrObj <- chromoDensity(chrObj, bandwidth = 5e6, cluster_threshold = 20) # UP and DOWN combined
+```
+
+```{r}
+sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = F, include_density = T)
+plot(sepDenPlot)
+```
+
+```{r}
+sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = F, include_density = T)
+plot(sepDenPlot)
+```
+
+```{r}
+sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = T, include_density = T)
+plot(sepDenPlot)
+```
+
+You can once again test different clustering methods with reclassify, but also with the bandwidth and cluster_threshold parameters.
+
+```{r}
+chrObj <- chromoDensity(chrObj, bandwidth = 3e6, cluster_threshold = 10, DEG_type = "UP")
+chrObj <- chromoDensity(chrObj, bandwidth = 3e6, cluster_threshold = 10, DEG_type = "DOWN")
+chrObj <- chromoDensity(chrObj, bandwidth = 3e6, cluster_threshold = 10) # UP and DOWN combined
+```
+
+```{r}
+sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = F, include_density = T)
+plot(sepDenPlot)
+```
+
+```{r}
+sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = F, include_density = T)
+plot(sepDenPlot)
+```
+
+```{r}
+sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = F, include_density = T)
+plot(sepDenPlot)
+```
+
+# Over representation analysis
+
+When using chromoORA don't forget to cite clusterProfiler!
+
+```{r}
+chrObj <- chromoORA(chrObj, cluster = 1)
+chrObj <- chromoORA(chrObj, cluster = 2, DEG_type = "UP")
+chrObj <- chromoORA(chrObj, cluster = 1, DEG_type = "DOWN")
+```
+
+```{r}
+oraPlot <- chromoORAPlot(chrObj, cluster = 1, title = NULL)
+plot(oraPlot)
+```
+
+```{r}
+oraPlot <- chromoORAPlot(chrObj, cluster = 2, DEG_type = "UP", title = NULL)
+plot(oraPlot)
+```
+
+```{r}
+oraPlot <- chromoORAPlot(chrObj, cluster = 1, DEG_type = "DOWN", title = NULL)
+plot(oraPlot)
+```
+
+# Zoom
+
+```{r}
+zoom_plot <- chromoZoom(chrObj, cluster = 1)
+plot(zoom_plot)
+```
+
+```{r}
+zoom_plot <- chromoZoom(chrObj, cluster = 2, DEG_type = "UP")
+plot(zoom_plot)
+```
+
+```{r}
+zoom_plot <- chromoZoom(chrObj, cluster = 1, DEG_type = "DOWN")
+plot(zoom_plot)
+```
