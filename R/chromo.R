@@ -4,8 +4,8 @@
 #######################################
 
 chromoDocumentation <- function() {
-  file <- system.file("doc", "documentation.pdf", package = "chromo")
-  if (file == "") stop("Documentation PDF not found. Try reinstalling the package.")
+  file <- system.file("doc", "documentation.html", package = "chromo")
+  if (file == "") stop("Documentation HTML not found. Try reinstalling the package.")
   utils::browseURL(file)
 }
 
@@ -15,8 +15,8 @@ chromoDocumentation <- function() {
 #################################
 
 chromoVignette <- function() {
-  file <- system.file("doc", "vignette.pdf", package = "chromo")
-  if (file == "") stop("Vignette PDF not found. Try reinstalling the package.")
+  file <- system.file("doc", "vignette.html", package = "chromo")
+  if (file == "") stop("Vignette HTML not found. Try reinstalling the package.")
   utils::browseURL(file)
 }
 
@@ -555,13 +555,10 @@ chromoDensity <- function(
       score = -log10(pval)
     ) %>%
     arrange(-score) %>%
+    filter(n_DEG > 1) %>% # removing clusters with only 1 DEG
     mutate(
       cluster_num = seq(1,nrow(DEG_clusters))
     )
-
-  # removing clusters with only 1 DEG
-  DEG_clusters <- DEG_clusters %>%
-    filter(n_DEG > 1)
 
   # Bands affected by each cluster
   DEG_clusters <- DEG_clusters %>%

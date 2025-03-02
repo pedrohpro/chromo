@@ -1,5 +1,5 @@
 ---
-title: "vignette"
+title: "chromoVignette"
 output: html_document
 date: "2025-02-25"
 ---
@@ -7,10 +7,6 @@ date: "2025-02-25"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-# chromo vignette
-
-## Compiled: February 25, 2025
 
 # Installation
 
@@ -20,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Dependencies
 
-```{r}
+```{r, echo=TRUE, message=FALSE, warning=FALSE, results="hide"}
 library(tidyverse) # do it all
 library(patchwork) # for chromoDensityPlot
 library(clusterProfiler) # for chromoORA
@@ -44,85 +40,71 @@ chrObj <- chromoInitiate(DEdf = df, gene_col = "Symbol", fc_col = "log2FoldChang
 
 # Composition
 
-```{r}
+```{r, fig.width=10, fig.height=6, warning=FALSE}
 chrObj <- chromoComposition(chrObj)
 chrScatterPLot <- chromoCompositionPlot(chrObj)
 head(chrObj@composition[["compo_df"]])
-```
-
-```{r}
 plot(chrScatterPLot)
 ```
 
 You can also easily test different p-value and log2fc tresholds with chromoReclassify. 
 (Default values are p=0.05 and log2fc = 1)
-```{r}
+```{r, fig.width=10, fig.height=6, warning=FALSE}
 chrObj <- chromoReclassify(chrObj, pval_cutoff = 0.01, log2fc_cutoff = 0.5)
 chrObj <- chromoComposition(chrObj)
 chrScatterPLot <- chromoCompositionPlot(chrObj)
 head(chrObj@composition[["compo_df"]])
-```
-
-```{r}
 plot(chrScatterPLot)
 ```
 
 You can also easily test different enrichment types. 
 (Default enrichment is by percentage)
-```{r}
+```{r, fig.width=10, fig.height=6, warning=FALSE}
 chrObj <- chromoReclassify(chrObj, pval_cutoff = 0.05, log2fc_cutoff = 1)
 chrObj <- chromoComposition(chrObj, score_method = "hyp")
 chrScatterPLot <- chromoCompositionPlot(chrObj)
 head(chrObj@composition[["compo_df"]])
-```
-
-```{r}
 plot(chrScatterPLot)
 ```
 
 # Density
 
-```{r}
+```{r, fig.width=10, fig.height=13, warning=FALSE}
 chrObj <- chromoDensity(chrObj, bandwidth = 5e6, cluster_threshold = 20, DEG_type = "UP")
 chrObj <- chromoDensity(chrObj, bandwidth = 5e6, cluster_threshold = 20, DEG_type = "DOWN")
 chrObj <- chromoDensity(chrObj, bandwidth = 5e6, cluster_threshold = 20) # UP and DOWN combined
-```
 
-```{r}
+head(chrObj@density[["UP_DOWN"]][["DEG_clusters"]])
+
+sepDenPlot <- chromoDensityPlot(chrObj, include_genes = F, include_density = T)
+plot(sepDenPlot)
+
 sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = F, include_density = T)
 plot(sepDenPlot)
-```
 
-```{r}
-sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = F, include_density = T)
-plot(sepDenPlot)
-```
-
-```{r}
-sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = T, include_density = T)
+sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "DOWN", include_genes = T, include_density = T)
 plot(sepDenPlot)
 ```
 
 You can once again test different clustering methods with reclassify, but also with the bandwidth and cluster_threshold parameters.
 
-```{r}
+```{r, fig.width=10, fig.height=13, warning=FALSE}
 chrObj <- chromoDensity(chrObj, bandwidth = 3e6, cluster_threshold = 10, DEG_type = "UP")
 chrObj <- chromoDensity(chrObj, bandwidth = 3e6, cluster_threshold = 10, DEG_type = "DOWN")
 chrObj <- chromoDensity(chrObj, bandwidth = 3e6, cluster_threshold = 10) # UP and DOWN combined
-```
 
-```{r}
+sepDenPlot <- chromoDensityPlot(chrObj, include_genes = F, include_density = T)
+plot(sepDenPlot)
+
 sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = F, include_density = T)
+plot(sepDenPlot)
+
+sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "DOWN", include_genes = F, include_density = T)
 plot(sepDenPlot)
 ```
 
-```{r}
-sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = F, include_density = T)
-plot(sepDenPlot)
-```
-
-```{r}
-sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = F, include_density = T)
+```{r, fig.width=10, fig.height=7, warning=FALSE}
+sepDenPlot <- chromoDensityPlot(chrObj, DEG_type = "UP", include_genes = F, include_density = F, all_chr = F, n_top_clusters = 15)
 plot(sepDenPlot)
 ```
 
@@ -130,40 +112,30 @@ plot(sepDenPlot)
 
 When using chromoORA don't forget to cite clusterProfiler!
 
-```{r}
+```{r, fig.width=7, fig.height=3, warning=FALSE}
 chrObj <- chromoORA(chrObj, cluster = 1)
 chrObj <- chromoORA(chrObj, cluster = 2, DEG_type = "UP")
 chrObj <- chromoORA(chrObj, cluster = 1, DEG_type = "DOWN")
-```
 
-```{r}
 oraPlot <- chromoORAPlot(chrObj, cluster = 1, title = NULL)
 plot(oraPlot)
-```
 
-```{r}
 oraPlot <- chromoORAPlot(chrObj, cluster = 2, DEG_type = "UP", title = NULL)
 plot(oraPlot)
-```
 
-```{r}
 oraPlot <- chromoORAPlot(chrObj, cluster = 1, DEG_type = "DOWN", title = NULL)
 plot(oraPlot)
 ```
 
 # Zoom
 
-```{r}
+```{r, fig.width=10, fig.height=5, warning=FALSE}
 zoom_plot <- chromoZoom(chrObj, cluster = 1)
 plot(zoom_plot)
-```
 
-```{r}
 zoom_plot <- chromoZoom(chrObj, cluster = 2, DEG_type = "UP")
 plot(zoom_plot)
-```
 
-```{r}
 zoom_plot <- chromoZoom(chrObj, cluster = 1, DEG_type = "DOWN")
 plot(zoom_plot)
 ```
