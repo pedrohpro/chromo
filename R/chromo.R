@@ -555,7 +555,9 @@ chromoDensity <- function(
       score = -log10(pval)
     ) %>%
     arrange(-score) %>%
-    filter(n_DEG > 1) %>% # removing clusters with only 1 DEG
+    filter(n_DEG > 1) # removing clusters with only 1 DEG
+
+  DEG_clusters <- DEG_clusters %>%
     mutate(
       cluster_num = seq(1,nrow(DEG_clusters))
     )
