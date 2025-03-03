@@ -26,6 +26,13 @@ library(scales) # for plots
 library(chromo)
 ```
 
+# Documentation/vignette
+
+```{r}
+chromoDocumentation()
+#chromoVignette()
+```
+
 # Initialise chromo object
 
 In this tutorial we will use the differential expression table obtained comparing bulk RNA-seq PBMC samples from Down Syndrome (DS) patients against control (CT) patients. The data comes from the Human Trisome Project run by the Linda Crnic Institute for Down Syndrome at the University of Colorado Anschutz Medical Campus with NCBI GEO access code: GSE190125. The study sequenced 304 DS individuals and 96 CT individuals.
