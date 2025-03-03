@@ -1115,3 +1115,15 @@ chromoORAPlot <- function(
 }
 
 
+#######################################
+######    chromo Interactions   #######
+#######################################             for integrated HI-C data across several cell types, tissues and conditions
+
+
+
+#####################################
+######    chromo Regulation   #######
+#####################################             for integrated chip-seq data across several cell types, tissues and conditions
+
+
+
