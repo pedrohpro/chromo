@@ -940,10 +940,10 @@ chromoZoom <- function(
   for (i in not_DEGs){
     zoom_plot <- zoom_plot +
       annotate("rect",
-               xmin = DEdf[DEdf$Symbol == i,"start_position"],
-               xmax = DEdf[DEdf$Symbol == i,"end_position"],
-               ymin = DEdf[DEdf$Symbol == i,"log2FoldChange"] - size_adj,
-               ymax = DEdf[DEdf$Symbol == i,"log2FoldChange"],
+               xmin = DEdf %>% filter(!!sym(gene_col) == i) %>% pull(!!sym(start_position)),
+               xmax = DEdf %>% filter(!!sym(gene_col) == i) %>% pull(!!sym(end_position)),
+               ymin = DEdf %>% filter(!!sym(gene_col) == i) %>% pull(!!sym(fc_col)) - size_adj,
+               ymax = DEdf %>% filter(!!sym(gene_col) == i) %>% pull(!!sym(fc_col)),
                fill = '#77777777'
       )
   }
@@ -952,11 +952,11 @@ chromoZoom <- function(
   for (i in DEGs_in_cluster){
     zoom_plot <- zoom_plot +
       annotate("rect",
-               xmin = DEdf[DEdf$Symbol == i,"start_position"],
-               xmax = DEdf[DEdf$Symbol == i,"end_position"],
-               ymin = DEdf[DEdf$Symbol == i,"log2FoldChange"] - size_adj,
-               ymax = DEdf[DEdf$Symbol == i,"log2FoldChange"],
-               fill = ifelse(DEdf[DEdf$Symbol == i,"DEG"] == "DOWN", "#0033ffaa", "#ff3300aa")
+               xmin = DEdf %>% filter(!!sym(gene_col) == i) %>% pull(!!sym(start_position)),
+               xmax = DEdf %>% filter(!!sym(gene_col) == i) %>% pull(!!sym(end_position)),
+               ymin = DEdf %>% filter(!!sym(gene_col) == i) %>% pull(!!sym(fc_col)) - size_adj,
+               ymax = DEdf %>% filter(!!sym(gene_col) == i) %>% pull(!!sym(fc_col)),
+               fill = ifelse(DEdf %>% filter(!!sym(gene_col) == i) %>% pull(!!sym(DEG)) == "DOWN", "#0033ffaa", "#ff3300aa")
       )
   }
 
@@ -966,7 +966,7 @@ chromoZoom <- function(
   zoom_plot <- zoom_plot +
     geom_text_repel(
       data = DEdf %>% filter(!!sym(gene_col) %in% DEGs_in_cluster),
-      aes(x = avg_position, y = log2FoldChange, label = Symbol, color = DEG),
+      aes(x = avg_position, y = !!sym(fc_col), label = !!sym(gene_col), color = DEG), ######
       hjust = 0.5,
       vjust = 0.5,
       size = size_gene_name,
@@ -1089,7 +1089,7 @@ chromoORAPlot <- function(
     annotate(
       "text",
       x = -log10(0.05),
-      y = number_of_onto + 0.6,
+      y = nrow(df) + 0.6,
       label = "*",
       color = "#cc2222",
       size = 6
@@ -1097,7 +1097,7 @@ chromoORAPlot <- function(
     annotate(
       "text",
       x = -log10(0.01),
-      y = number_of_onto + 0.6,
+      y = nrow(df) + 0.6,
       label = "**",
       color = "#cc2222",
       size = 6
@@ -1105,7 +1105,7 @@ chromoORAPlot <- function(
     annotate(
       "text",
       x = -log10(0.001),
-      y = number_of_onto + 0.6,
+      y = nrow(df) + 0.6,
       label = "***",
       color = "#cc2222",
       size = 6
