@@ -89,7 +89,6 @@ chromoInitiate <- function(
         TRUE ~ "NO"
       )
     ) %>%
-    dplyr::filter(!duplicated(!!rlang::sym(gene_col))) %>%
     dplyr::arrange(chromosome_name, start_position)
 
   chromoObject@columns <- list(
