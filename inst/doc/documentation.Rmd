@@ -2,6 +2,9 @@
 title: "chromoDocumentation"
 output: html_document
 date: "2025-02-25"
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include=FALSE}
@@ -9,166 +12,239 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## chromoDocumentation()
-<span style="color:#00aa33;">This function opens the html document with details on chromo functions and parameters.</span>
+
+[This function opens the html document with details on chromo functions
+and parameters.]{style="color:#00aa33;"}
 
 ## chromoVignette()
-<span style="color:#00aa33;">This function opens the html document containing a tutorial on Down Syndrome data.</span>
+
+[This function opens the html document containing a tutorial on Down
+Syndrome data.]{style="color:#00aa33;"}
 
 ## chromoInitiate()
-<span style="color:#00aa33;">This function creates your chromo object instance.</span>
-**DEdf**, <span style="color:#aa0000;">This is the differential expression data frame containing at least the 3 required columns (gene name, log2fc, pvalue).</span>
 
-**pval_cutoff** = 0.05, <span style="color:#aa0000;">This is the p value cutoff to define which genes are DEGs.</span>
+[This function creates your chromo object instance.]{style="color:#00aa33;"} 
 
-**log2fc_cutoff** = 1, <span style="color:#aa0000;">This is the log2fc cutoff to define which genes are DEGs.</span>
+**DEdf**, [This is the differential
+expression data frame containing at least the 3 required columns (gene
+name, log2fc, pvalue).]{style="color:#aa0000;"}
 
-**gene_col**, <span style="color:#aa0000;">This is the name of the gene name containing column in your data frame. NOTE that it should be the gene symbol and NOT any other type of transcript nomenclature.</span>
+**pval_cutoff** = 0.05, [This is the p value cutoff to define which
+genes are DEGs.]{style="color:#aa0000;"}
 
-**fc_col**, <span style="color:#aa0000;">This is the name of the log2 Fold Change containing column in your data frame.</span>
+**log2fc_cutoff** = 1, [This is the log2fc cutoff to define which genes
+are DEGs.]{style="color:#aa0000;"}
 
-**p_col**, <span style="color:#aa0000;">This is the name of the p value containing column in your data frame.</span>
+**gene_col**, [This is the name of the gene name containing column in
+your data frame. NOTE that it should be the gene symbol and NOT any
+other type of transcript nomenclature.]{style="color:#aa0000;"}
 
-**transcript_type** = c("Mt_tRNA","Mt_rRNA","protein_coding","lncRNA","snRNA","rRNA","pseudogene","misc_RNA","processed_pseudogene",
-                        "transcribed_unprocessed_pseudogene","rRNA_pseudogene","unprocessed_pseudogene","TEC","miRNA","transcribed_processed_pseudogene",
-                        "snoRNA","unitary_pseudogene","transcribed_unitary_pseudogene","sRNA","IG_V_gene","IG_C_pseudogene","TR_J_gene",
-                        "TR_V_gene","TR_J_pseudogene","TR_D_gene","TR_C_gene","IG_V_pseudogene","scaRNA","ribozyme","artifact","IG_C_gene",
-                        "IG_J_gene","IG_J_pseudogene","IG_D_gene","translated_processed_pseudogene","TR_V_pseudogene","IG_pseudogene","vault_RNA","scRNA")
-<span style="color:#aa0000;">Here you can filter the transcript type, if desired, based on biomaRt transcript annotations.</span>
+**fc_col**, [This is the name of the log2 Fold Change containing column
+in your data frame.]{style="color:#aa0000;"}
+
+**p_col**, [This is the name of the p value containing column in your
+data frame.]{style="color:#aa0000;"}
+
+**keep_rep_feat** = F, [To remove repeated features. When separating by chromosome this MUST be FALSE. When separating by cell type this MUST be TRUE.]{style="color:#aa0000;"}
+
+**transcript_type** =
+c("Mt_tRNA","Mt_rRNA","protein_coding","lncRNA","snRNA","rRNA","pseudogene","misc_RNA","processed_pseudogene",
+"transcribed_unprocessed_pseudogene","rRNA_pseudogene","unprocessed_pseudogene","TEC","miRNA","transcribed_processed_pseudogene",
+"snoRNA","unitary_pseudogene","transcribed_unitary_pseudogene","sRNA","IG_V_gene","IG_C_pseudogene","TR_J_gene",
+"TR_V_gene","TR_J_pseudogene","TR_D_gene","TR_C_gene","IG_V_pseudogene","scaRNA","ribozyme","artifact","IG_C_gene",
+"IG_J_gene","IG_J_pseudogene","IG_D_gene","translated_processed_pseudogene","TR_V_pseudogene","IG_pseudogene","vault_RNA","scRNA")
+[Here you can filter the transcript type, if desired, based on biomaRt
+transcript annotations.]{style="color:#aa0000;"}
 
 ## chromoReclassify()
-<span style="color:#00aa33;">This function allows you to easily test different pvalue and log2fc threshold values.</span>
 
-**chromoObject**, <span style="color:#aa0000;">This is the chromo object you are working with.</span>
+[This function allows you to easily test different pvalue and log2fc
+threshold values.]{style="color:#00aa33;"}
 
-**pval_cutoff** = 0.05, <span style="color:#aa0000;">New pvalue threshold to classify DEGs.</span>
+**chromoObject**, [This is the chromo object you are working
+with.]{style="color:#aa0000;"}
 
-**log2fc_cutoff** = 1 <span style="color:#aa0000;">New log2fc threshold to classify DEGs.</span>
+**pval_cutoff** = 0.05, [New pvalue threshold to classify
+DEGs.]{style="color:#aa0000;"}
+
+**log2fc_cutoff** = 1 [New log2fc threshold to classify
+DEGs.]{style="color:#aa0000;"}
 
 ## chromoComposition()
-<span style="color:#00aa33;">This function calculates, either by percentage or the hypergeometric test, how much a chromosome or cell type is enriched with DEGs and returns a data frame inside your object.</span>
 
-**chromoObject**, <span style="color:#aa0000;">This is the chromo object you are working with.</span>
+[This function calculates, either by percentage or the hypergeometric
+test, how much a chromosome or cell type is enriched with DEGs and
+returns a data frame inside your object.]{style="color:#00aa33;"}
 
-**separate_by** = "chromosome_name", <span style="color:#aa0000;">This is the column by which you will group your genes. Could be either by chromosome or cell type in the case of single cell studies.</span>
+**chromoObject**, [This is the chromo object you are working
+with.]{style="color:#aa0000;"}
 
-**only_expr_features** = F, <span style="color:#aa0000;">This parameter should be used only in single cell studies and when separate_by is deviding by cell type. It allows you to filter features which are not expressed within each cell type to better evaluate DEG erichment.</span>
+**separate_by** = "chromosome_name", [This is the column by which you
+will group your genes. Could be either by chromosome or cell type in the
+case of single cell studies.]{style="color:#aa0000;"}
 
-**pct_expr_cols** = c("pct.1", "pct.2"), <span style="color:#aa0000;">When only_expr_features is true this 2 elements list should contain the column names that specify the percentage of cell within each group that express that feature. Default value is set to Seurat column names.</span>
+**only_expr_features** = F, [This parameter should be used only in
+single cell studies and when separate_by is deviding by cell type. It
+allows you to filter features which are not expressed within each cell
+type to better evaluate DEG erichment.]{style="color:#aa0000;"}
 
-**score_method** = "pct", <span style="color:#aa0000;">This parameter specifies what enrichment method to be used. It can be "pct" for percentage, "hyp" for hypergeometric test or "hyp_padj" for the adjusted pvalue calculated in the hypergeometric test.</span>
+**pct_expr_cols** = c("pct.1", "pct.2"), [When only_expr_features is
+true this 2 elements list should contain the column names that specify
+the percentage of cell within each group that express that feature.
+Default value is set to Seurat column names.]{style="color:#aa0000;"}
 
-**padj_method** = "BH" <span style="color:#aa0000;">This parameter defines which method to adjust the pvalue. Options are the existing parameters of the p.adjust() function. It will only be used if score_method is "hyp_padj"</span>
-    
+**score_method** = "pct", [This parameter specifies what enrichment
+method to be used. It can be "pct" for percentage, "hyp" for
+hypergeometric test or "hyp_padj" for the adjusted pvalue calculated in
+the hypergeometric test.]{style="color:#aa0000;"}
+
+**padj_method** = "BH" [This parameter defines which method to adjust
+the pvalue. Options are the existing parameters of the p.adjust()
+function. It will only be used if score_method is
+"hyp_padj"]{style="color:#aa0000;"}
+
 ## chromoCompositionPlot
-<span style="color:#00aa33;">This function plots the values calculated in chromoComposition.</span>
 
-**chromoObject**, <span style="color:#aa0000;">This is the chromo object you are working with.</span>
+[This function plots the values calculated in
+chromoComposition.]{style="color:#00aa33;"}
 
-**highlight_features** = "top_by_separator", <span style="color:#aa0000;">Which features to highlight the name. "top_by_separator" highlight the top n features by chr/celltype, "top_overall" highlight the top n DEGs overall, or you can provide a list of gene names to highlight.</span>
+**chromoObject**, [This is the chromo object you are working
+with.]{style="color:#aa0000;"}
 
-**show_if_not_deg** = T, <span style="color:#aa0000;">To show genes names even if they are not DEGs. Only if providing a list of names.</span>
+**highlight_features** = "top_by_separator", [Which features to
+highlight the name. "top_by_separator" highlight the top n features by
+chr/celltype, "top_overall" highlight the top n DEGs overall, or you can
+provide a list of gene names to highlight.]{style="color:#aa0000;"}
 
-**n_top_features** = 1, <span style="color:#aa0000;">Number of top features to plot names, when using "top_by_separator" or "top_overall".</span>
+**show_if_not_deg** = T, [To show genes names even if they are not DEGs.
+Only if providing a list of names.]{style="color:#aa0000;"}
 
-**fc_line** = T, <span style="color:#aa0000;">To include de foldchange horizontal lines.</span>
+**n_top_features** = 1, [Number of top features to plot names, when
+using "top_by_separator" or "top_overall".]{style="color:#aa0000;"}
 
-**title_xaxis** = "Chromosome", <span style="color:#aa0000;">X axis title. NULL to not include it.</span>
+**fc_line** = T, [To include de foldchange horizontal
+lines.]{style="color:#aa0000;"}
 
-**title_yaxis** = "Log2 fold change", <span style="color:#aa0000;">Y axis title. NULL to not include it.</span>
+**title_xaxis** = "Chromosome", [X axis title. NULL to not include
+it.]{style="color:#aa0000;"}
 
-**color_dot_down** = "#3771c8aa", 
+**title_yaxis** = "Log2 fold change", [Y axis title. NULL to not include
+it.]{style="color:#aa0000;"}
 
-**color_dot_up** = "#ff2200aa", 
+**color_dot_down** = "#3771c8aa",
 
-**color_dot_no** = "#dddddd33", 
+**color_dot_up** = "#ff2200aa",
 
-**color_bar_down** = "#3771c866", 
+**color_dot_no** = "#dddddd33",
 
-**color_bar_up** = "#ff220066", 
+**color_bar_down** = "#3771c866",
 
-**color_gene_name_down** = "#2D5EAA", 
+**color_bar_up** = "#ff220066",
 
-**color_gene_name_up** = "#aa0000", 
+**color_gene_name_down** = "#2D5EAA",
 
-**color_gene_name_no** = "#555555", 
+**color_gene_name_up** = "#aa0000",
 
-**color_score_down** = "#2D5EAA", 
+**color_gene_name_no** = "#555555",
 
-**color_score_up** = "#aa0000", 
+**color_score_down** = "#2D5EAA",
 
-**color_line_up** = "#aa0000", 
+**color_score_up** = "#aa0000",
 
-**color_line_down** = "#2D5EAA", 
+**color_line_up** = "#aa0000",
 
-**color_xaxis_text** = "black", 
+**color_line_down** = "#2D5EAA",
 
-**color_xaxis_label** = "black", 
+**color_xaxis_text** = "black",
 
-**color_yaxis_text** = "black", 
+**color_xaxis_label** = "black",
 
-**color_yaxis_label** = "black", 
+**color_yaxis_text** = "black",
 
-**size_dot_alt** = 1.2, 
+**color_yaxis_label** = "black",
 
-**size_dot_no** = 0.8, 
+**size_dot_alt** = 1.2,
 
-**size_bar** = 0.8, 
+**size_dot_no** = 0.8,
 
-**size_gene_name** = 3.2, 
+**size_bar** = 0.8,
 
-**size_score** = ifelse(chromoObject@composition$score_method %in% c("hyp", "hyp_padj"), 7, 4),
+**size_gene_name** = 3.2,
 
-**size_line** = 0.4, 
+**size_score** =
+ifelse([chromoObject\@composition](mailto:chromoObject@composition){.email}\$score_method
+%in% c("hyp", "hyp_padj"), 7, 4),
 
-**size_xaxis_text** = 14, 
+**size_line** = 0.4,
 
-**size_xaxis_label** = 12, 
+**size_xaxis_text** = 14,
 
-**size_yaxis_text** = 12, 
+**size_xaxis_label** = 12,
 
-**size_yaxis_label** = 12, 
+**size_yaxis_text** = 12,
 
-**style_gene_name** = "plain", 
+**size_yaxis_label** = 12,
 
-**style_score** = "bold", 
+**style_gene_name** = "plain",
 
-**style_line** = 2, <span style="color:#aa0000;">1 - continuous, 2- dashed, 3 - dotted</span>
+**style_score** = "bold",
+
+**style_line** = 2, [1 - continuous, 2- dashed, 3 -
+dotted]{style="color:#aa0000;"}
 
 **style_xaxis_text** = "bold",
 
 **style_xaxis_label** = "plain",
 
-**style_yaxis_text** = "bold", 
+**style_yaxis_text** = "bold",
 
-**style_yaxis_label** = "plain" 
-    
+**style_yaxis_label** = "plain"
+
 ## chromoDensity()
-<span style="color:#00aa33;">This function identifies clusters of spatially close genes (regions) that are enriched for DEGs.</span>
 
-**chromoObject**, <span style="color:#aa0000;">This is the chromo object you are working with.</span>
+[This function identifies clusters of spatially close genes (regions)
+that are enriched for DEGs.]{style="color:#00aa33;"}
 
-**bandwidth** = "nrd0", <span style="color:#aa0000;">The bandwidth controls the standard deviation of the gaussian distribution over each gene when calculating the kernel density. Smaller sd will likely form more and smaller clusters. Larger sd will form less but bigger clusters.</span>
+**chromoObject**, [This is the chromo object you are working
+with.]{style="color:#aa0000;"}
 
-**cluster_threshold** = 20, <span style="color:#aa0000;">The percentage of the highest density value that will be used to form the clusters. Higher values will likely form more and smaller clusters. Lower values will form less but bigger clusters.</span>
+**bandwidth** = "nrd0", [The bandwidth controls the standard deviation
+of the gaussian distribution over each gene when calculating the kernel
+density. Smaller sd will likely form more and smaller clusters. Larger
+sd will form less but bigger clusters.]{style="color:#aa0000;"}
 
-**DEG_type** = list("UP", "DOWN"), <span style="color:#aa0000;">Perform the clustering looking at all DEGs, just up regulated DEGs or just down regulated DEGs. Options are: c("UP", "DOWN"), "UP, "DOWN"</span>
+**cluster_threshold** = 20, [The percentage of the highest density value
+that will be used to form the clusters. Higher values will likely form
+more and smaller clusters. Lower values will form less but bigger
+clusters.]{style="color:#aa0000;"}
 
-**padj_method** = "none" <span style="color:#aa0000;">c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", fdr", "none")</span>
-    
+**DEG_type** = list("UP", "DOWN"), [Perform the clustering looking at
+all DEGs, just up regulated DEGs or just down regulated DEGs. Options
+are: c("UP", "DOWN"), "UP, "DOWN"]{style="color:#aa0000;"}
+
+**padj_method** = "none" [c("holm", "hochberg", "hommel", "bonferroni",
+"BH", "BY", fdr", "none")]{style="color:#aa0000;"}
+
 ## chromoDensityPlot()
-<span style="color:#00aa33;">This function plots the values calculated in chromoDensity.</span>
 
-**chromoObject**, <span style="color:#aa0000;">This is the chromo object you are working with.</span>
+[This function plots the values calculated in
+chromoDensity.]{style="color:#00aa33;"}
 
-**DEG_type** = list("UP", "DOWN"), <span style="color:#aa0000;">Options are: c("UP", "DOWN"), "UP, "DOWN"</span>
+**chromoObject**, [This is the chromo object you are working
+with.]{style="color:#aa0000;"}
 
-**n_top_clusters** = 10, <span style="color:#aa0000;">Top n clusters with most significant pvalues to plot.</span>
+**DEG_type** = list("UP", "DOWN"), [Options are: c("UP", "DOWN"), "UP,
+"DOWN"]{style="color:#aa0000;"}
 
-**include_genes** = F, <span style="color:#aa0000;">To include genes.</span>
+**n_top_clusters** = 10, [Top n clusters with most significant pvalues
+to plot.]{style="color:#aa0000;"}
 
-**include_density** = T, <span style="color:#aa0000;">To include the density curve.</span>
+**include_genes** = F, [To include genes.]{style="color:#aa0000;"}
 
-**all_chr** = T, <span style="color:#aa0000;">To include all chr in order.</span>
+**include_density** = T, [To include the density
+curve.]{style="color:#aa0000;"}
+
+**all_chr** = T, [To include all chr in order.]{style="color:#aa0000;"}
 
 **color_enrich** = "#990099",
 
@@ -177,13 +253,17 @@ knitr::opts_chunk$set(echo = TRUE)
 **color_enrich_down** = "#0022dd"
 
 ## chromoZoom()
-<span style="color:#00aa33;">This function plots all transcripts present inside that cluster to help researchers locate genes of interest.</span>
 
-**chromoObject**, <span style="color:#aa0000;">This is the chromo object you are working with.</span>
+[This function plots all transcripts present inside that cluster to help
+researchers locate genes of interest.]{style="color:#00aa33;"}
 
-**DEG_type** = list("UP", "DOWN"), <span style="color:#aa0000;">Options are: c("UP", "DOWN"), "UP, "DOWN"</span>
+**chromoObject**, [This is the chromo object you are working
+with.]{style="color:#aa0000;"}
 
-**cluster** = 1, <span style="color:#aa0000;">Which cluster to zoom in.</span>
+**DEG_type** = list("UP", "DOWN"), [Options are: c("UP", "DOWN"), "UP,
+"DOWN"]{style="color:#aa0000;"}
+
+**cluster** = 1, [Which cluster to zoom in.]{style="color:#aa0000;"}
 
 **color_line_up** = "#aa0000",
 
@@ -220,31 +300,47 @@ knitr::opts_chunk$set(echo = TRUE)
 **style_yaxis_text** = "bold",
 
 **style_yaxis_label** = "plain"
-    
+
 ## chromoORA()
-<span style="color:#00aa33;">This function uses clusterProfiler to perform over representation analysis of Gene Ontology terms for DEGs inside a desired clusters.</span>
 
-**chromoObject**, <span style="color:#aa0000;">This is the chromo object you are working with.</span>
+[This function uses clusterProfiler to perform over representation
+analysis of Gene Ontology terms for DEGs inside a desired
+clusters.]{style="color:#00aa33;"}
 
-**DEG_type** = list("UP", "DOWN"), <span style="color:#aa0000;">Options are: c("UP", "DOWN"), "UP, "DOWN"</span>
+**chromoObject**, [This is the chromo object you are working
+with.]{style="color:#aa0000;"}
 
-**cluster** = 1 <span style="color:#aa0000;">Which cluster to perfom ORA with.</span>
-    
+**DEG_type** = list("UP", "DOWN"), [Options are: c("UP", "DOWN"), "UP,
+"DOWN"]{style="color:#aa0000;"}
+
+**cluster** = 1 [Which cluster to perfom ORA
+with.]{style="color:#aa0000;"}
+
 ## chromoORAPlot()
-<span style="color:#00aa33;">This function plots the top n ontologies enriched calculated with chromoORA.</span>
 
-**chromoObject**, <span style="color:#aa0000;">This is the chromo object you are working with.</span>
+[This function plots the top n ontologies enriched calculated with
+chromoORA.]{style="color:#00aa33;"}
 
-**DEG_type** = list("UP", "DOWN"), <span style="color:#aa0000;">Options are: c("UP", "DOWN"), "UP, "DOWN"</span>
+**chromoObject**, [This is the chromo object you are working
+with.]{style="color:#aa0000;"}
 
-**cluster** = 1, <span style="color:#aa0000;">Which cluster to plot it's ORA.</span>
+**DEG_type** = list("UP", "DOWN"), [Options are: c("UP", "DOWN"), "UP,
+"DOWN"]{style="color:#aa0000;"}
 
-**number_of_onto** = 5, <span style="color:#aa0000;">Number of top most significant ontolgies to include in the plot.</span>
+**cluster** = 1, [Which cluster to plot it's
+ORA.]{style="color:#aa0000;"}
 
-**highlight** = "ONTOLOGY", <span style="color:#aa0000;">Which column to use to highlight the ontology type. Here if needed the user can create a new column grouping ontologies as desired.</span>
+**number_of_onto** = 5, [Number of top most significant ontolgies to
+include in the plot.]{style="color:#aa0000;"}
 
-**color_list** = c("CC" = "#FBB4AEaa", "MF"  = "#B3CDE3aa", "BP" = "#CCEBC5aa"), <span style="color:#aa0000;">If a new column is used change this parameter as well.</span>
+**highlight** = "ONTOLOGY", [Which column to use to highlight the
+ontology type. Here if needed the user can create a new column grouping
+ontologies as desired.]{style="color:#aa0000;"}
+
+**color_list** = c("CC" = "#FBB4AEaa", "MF" = "#B3CDE3aa", "BP" =
+"#CCEBC5aa"), [If a new column is used change this parameter as
+well.]{style="color:#aa0000;"}
 
 **text_size** = 4,
 
-**title** = paste0(DEG_type, "_cluster: ", cluster)
+**title** = paste0(DEG_type, "\_cluster: ", cluster)

@@ -368,9 +368,10 @@ containing a tutorial on Down Syndrome data.</span></p>
 <div id="chromoinitiate" class="section level2">
 <h2>chromoInitiate()</h2>
 <p><span style="color:#00aa33;">This function creates your chromo object
-instance.</span> <strong>DEdf</strong>, <span style="color:#aa0000;">This is the differential expression data frame
-containing at least the 3 required columns (gene name, log2fc,
-pvalue).</span></p>
+instance.</span></p>
+<p><strong>DEdf</strong>, <span style="color:#aa0000;">This is the
+differential expression data frame containing at least the 3 required
+columns (gene name, log2fc, pvalue).</span></p>
 <p><strong>pval_cutoff</strong> = 0.05, <span style="color:#aa0000;">This is the p value cutoff to define which genes
 are DEGs.</span></p>
 <p><strong>log2fc_cutoff</strong> = 1, <span style="color:#aa0000;">This
@@ -384,6 +385,9 @@ name of the log2 Fold Change containing column in your data
 frame.</span></p>
 <p><strong>p_col</strong>, <span style="color:#aa0000;">This is the name
 of the p value containing column in your data frame.</span></p>
+<p><strong>keep_rep_feat</strong> = F, <span style="color:#aa0000;">To
+remove repeated features. When separating by chromosome this MUST be
+FALSE. When separating by cell type this MUST be TRUE.</span></p>
 <p><strong>transcript_type</strong> =
 c(“Mt_tRNA”,“Mt_rRNA”,“protein_coding”,“lncRNA”,“snRNA”,“rRNA”,“pseudogene”,“misc_RNA”,“processed_pseudogene”,
 “transcribed_unprocessed_pseudogene”,“rRNA_pseudogene”,“unprocessed_pseudogene”,“TEC”,“miRNA”,“transcribed_processed_pseudogene”,
@@ -589,7 +593,7 @@ ontologies as desired.</span></p>
 “#B3CDE3aa”, “BP” = “#CCEBC5aa”), <span style="color:#aa0000;">If a new
 column is used change this parameter as well.</span></p>
 <p><strong>text_size</strong> = 4,</p>
-<p><strong>title</strong> = paste0(DEG_type, “_cluster: “, cluster)</p>
+<p><strong>title</strong> = paste0(DEG_type, “_cluster:”, cluster)</p>
 </div>
 
 
