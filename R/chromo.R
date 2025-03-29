@@ -349,6 +349,11 @@ chromoCompositionPlot <- function(
     set.seed(42) # gene name position
 
     deg_plot <- ggplot()+
+      geom_point( # invisible points to order separate_by factor levels correctly
+        data = data.frame(x = levels(chromoObject@data[[separate_by]]), y = 0),
+        aes(x = x, y = y),
+        alpha = 0
+      ) +
       geom_bar(
         data = compo_df,
         aes(x = !!sym(separate_by), y = proportion, fill = DEG),
