@@ -268,166 +268,156 @@ chromoCompositionPlot <- function(
   compo_df <- chromoObject@composition$compo_df
   pct_expr_cols <- chromoObject@columns$pct_expr_cols
 
-  if(!is.null(chromoObject@composition)){
+  aux <- chromoObject@data %>%
+    {if (chromoObject@composition$only_expr_features) filter(., !!sym(pct_expr_cols[[1]]) + !!sym(pct_expr_cols[[2]]) != 0) else .}
 
-    aux <- chromoObject@data %>%
-      {if (chromoObject@composition$only_expr_features) filter(., !!sym(pct_expr_cols[[1]]) + !!sym(pct_expr_cols[[2]]) != 0) else .}
-
-    compo_df <- compo_df %>%
-      mutate(
-        compo = case_when(
-          chromoObject@composition$score_method %in% c("hyp","hyp_padj") ~ -log10(compo),
-          TRUE ~ compo
-        )
+  compo_df <- compo_df %>%
+    mutate(
+      compo = case_when(
+        chromoObject@composition$score_method %in% c("hyp","hyp_padj") ~ -log10(compo),
+        TRUE ~ compo
       )
+    )
 
-    max_compo <- max(compo_df$compo, na.rm = T)
+  max_compo <- max(compo_df$compo, na.rm = T)
 
-    compo_df <- compo_df %>%
-      mutate(
-        proportion = (compo/max_compo * (max(abs(aux[[fc_col]])))),
-        proportion = case_when(
-          DEG == "UP" ~ proportion,
-          DEG == "DOWN" ~ -proportion,
-          TRUE ~ proportion
-        ),
-        compo = case_when(
-          chromoObject@composition$score_method %in% c("hyp","hyp_padj") ~ ifelse(compo > -log10(0.001),"***",ifelse(compo > -log10(0.01),"**",ifelse(compo > -log10(0.05),"*",""))),
-          TRUE ~ paste0(round(compo, 1), "%")
-        ),
-        y_axis = case_when(
-          DEG == "UP" ~ 1.2 * max(aux[[fc_col]]),
-          DEG == "DOWN" ~ 1.2 * min(aux[[fc_col]]),
-          TRUE ~ NA
-        ),
-        color = case_when(
-          DEG == "UP" ~ color_score_up,
-          DEG == "DOWN" ~ color_score_down,
-          TRUE ~ NA
-        )
+  compo_df <- compo_df %>%
+    mutate(
+      proportion = (compo/max_compo * (max(abs(aux[[fc_col]])))),
+      proportion = case_when(
+        DEG == "UP" ~ proportion,
+        DEG == "DOWN" ~ -proportion,
+        TRUE ~ proportion
+      ),
+      compo = case_when(
+        chromoObject@composition$score_method %in% c("hyp","hyp_padj") ~ ifelse(compo > -log10(0.001),"***",ifelse(compo > -log10(0.01),"**",ifelse(compo > -log10(0.05),"*",""))),
+        TRUE ~ paste0(round(compo, 1), "%")
+      ),
+      y_axis = case_when(
+        DEG == "UP" ~ 1.2 * max(aux[[fc_col]]),
+        DEG == "DOWN" ~ 1.2 * min(aux[[fc_col]]),
+        TRUE ~ NA
+      ),
+      color = case_when(
+        DEG == "UP" ~ color_score_up,
+        DEG == "DOWN" ~ color_score_down,
+        TRUE ~ NA
       )
+    )
 
-    # highlight features
-    if(highlight_features %in% c("top_by_separator", "top_overall")){
-      max_genes <- aux %>%
-        filter(DEG == "UP") %>%
-        { if (highlight_features == "top_by_separator") group_by(., !!sym(separate_by)) else . } %>%
-        slice_max(order_by = !!sym(fc_col), n = n_top_features, with_ties = FALSE) %>%
-        { if (highlight_features == "top_by_separator") ungroup(.) else . } %>%
-        dplyr::select(!!sym(gene_col), !!sym(separate_by))
+  # highlight features
+  if(highlight_features %in% c("top_by_separator", "top_overall")){
+    max_genes <- aux %>%
+      filter(DEG == "UP") %>%
+      { if (highlight_features == "top_by_separator") group_by(., !!sym(separate_by)) else . } %>%
+      slice_max(order_by = !!sym(fc_col), n = n_top_features, with_ties = FALSE) %>%
+      { if (highlight_features == "top_by_separator") ungroup(.) else . } %>%
+      dplyr::select(!!sym(gene_col), !!sym(separate_by))
 
-      min_genes <- aux %>%
-        filter(DEG == "DOWN") %>%
-        { if (highlight_features == "top_by_separator") group_by(., !!sym(separate_by)) else . } %>%
-        slice_min(order_by = !!sym(fc_col), n = n_top_features, with_ties = FALSE) %>%
-        { if (highlight_features == "top_by_separator") ungroup(.) else . } %>%
-        dplyr::select(!!sym(gene_col), !!sym(separate_by))
+    min_genes <- aux %>%
+      filter(DEG == "DOWN") %>%
+      { if (highlight_features == "top_by_separator") group_by(., !!sym(separate_by)) else . } %>%
+      slice_min(order_by = !!sym(fc_col), n = n_top_features, with_ties = FALSE) %>%
+      { if (highlight_features == "top_by_separator") ungroup(.) else . } %>%
+      dplyr::select(!!sym(gene_col), !!sym(separate_by))
 
-      hlf <- rbind(max_genes, min_genes) %>%
-        mutate(gene_sep = paste0(!!sym(gene_col), "_", !!sym(separate_by))) %>%
-        pull(gene_sep)
-    }else{
-      hlf <- highlight_features
-    }
-
-    local_aux <- aux %>%
-      mutate(
-        highlight = case_when(
-          highlight_features %in% c("top_by_separator", "top_overall") & paste0(!!sym(gene_col), "_", !!sym(separate_by)) %in% hlf ~ !!sym(gene_col),
-          !highlight_features %in% c("top_by_separator", "top_overall") & show_if_not_deg & !!sym(gene_col) %in% hlf ~ !!sym(gene_col),
-          !highlight_features %in% c("top_by_separator", "top_overall") & !show_if_not_deg & !!sym(gene_col) %in% hlf & DEG %in% c("UP", "DOWN") ~ !!sym(gene_col),
-          TRUE ~ NA
-        ),
-        color = case_when(
-          !is.na(highlight) & DEG == "UP" ~ color_gene_name_up,
-          !is.na(highlight) & DEG == "DOWN" ~ color_gene_name_down,
-          !is.na(highlight) & DEG == "NO" ~ color_gene_name_no,
-          TRUE ~ NA
-        )
-      )
-
-    set.seed(42) # gene name position
-
-    deg_plot <- ggplot()+
-      geom_point( # invisible points to order separate_by factor levels correctly
-        data = data.frame(x = levels(chromoObject@data[[separate_by]]), y = 0),
-        aes(x = x, y = y),
-        alpha = 0
-      ) +
-      geom_bar(
-        data = compo_df,
-        aes(x = !!sym(separate_by), y = proportion, fill = DEG),
-        stat = "identity",
-        width = size_bar
-      ) +
-      scale_fill_manual(values = c("UP" = color_bar_up, "DOWN" = color_bar_down))
-
-    if(fc_line){
-      deg_plot <- deg_plot +
-        geom_hline(yintercept = chromoObject@classification$log2fc_cutoff, color = color_line_up, linewidth = size_line, linetype = style_line) +
-        geom_hline(yintercept = -chromoObject@classification$log2fc_cutoff, color = color_line_down, linewidth = size_line, linetype = style_line)
-    }
-
-    deg_plot <- deg_plot +
-      geom_jitter( # not DEGs
-        data = local_aux %>% filter(DEG == "NO"),
-        aes(x = !!sym(separate_by), y = !!sym(fc_col), color = DEG),
-        position = position_jitterdodge(
-          jitter.width = 0.4,
-          jitter.height = 0,
-          dodge.width = 0,
-          seed = 42
-        ),
-        size = size_dot_no
-      )+
-      geom_jitter( # DEGs
-        data = local_aux %>% filter(DEG %in% c("UP", "DOWN")),
-        aes(x = !!sym(separate_by), y = !!sym(fc_col), color = DEG),
-        position = position_jitterdodge(
-          jitter.width = 0.4,
-          jitter.height = 0,
-          dodge.width = 0,
-          seed = 42
-        ),
-        size = size_dot_alt
-      )+
-      labs(
-        x = title_xaxis,
-        y = title_yaxis
-      )+
-      scale_color_manual(values = c("DOWN" = color_dot_down, "NO" = color_dot_no, "UP" = color_dot_up)) +
-      theme(
-        panel.background = element_rect(fill = "white"),
-        panel.grid = element_blank(),
-        axis.text.x = element_text(color = color_xaxis_text, size = size_xaxis_text, face = style_xaxis_text),
-        axis.title.x = element_text(color = color_xaxis_label, size = size_xaxis_label, face = style_xaxis_label),
-        axis.text.y = element_text(color = color_yaxis_text, size = size_yaxis_text, face = style_yaxis_text),
-        axis.title.y = element_text(color = color_yaxis_label, size = size_yaxis_label, face = style_yaxis_label),
-        legend.position = "none"
-      )+
-      geom_text_repel(
-        data = local_aux,
-        aes(x = !!sym(separate_by), y = !!sym(fc_col), color = DEG, label = highlight),
-        max.overlaps = Inf,
-        color = local_aux$color,
-        size = size_gene_name,
-        fontface = style_gene_name
-      ) +
-      annotate( #score
-        geom = "text",
-        x = compo_df[[separate_by]],
-        y = compo_df$y_axis,
-        label = compo_df$compo,
-        color = compo_df$color,
-        size = size_score,
-        fontface = style_score
-      )
-
-    return(deg_plot)
-
+    hlf <- rbind(max_genes, min_genes) %>%
+      mutate(gene_sep = paste0(!!sym(gene_col), "_", !!sym(separate_by))) %>%
+      pull(gene_sep)
   }else{
-    stop("Run chromoComposition first!")
+    hlf <- highlight_features
   }
+
+  local_aux <- aux %>%
+    mutate(
+      highlight = case_when(
+        highlight_features %in% c("top_by_separator", "top_overall") & paste0(!!sym(gene_col), "_", !!sym(separate_by)) %in% hlf ~ !!sym(gene_col),
+        !highlight_features %in% c("top_by_separator", "top_overall") & show_if_not_deg & !!sym(gene_col) %in% hlf ~ !!sym(gene_col),
+        !highlight_features %in% c("top_by_separator", "top_overall") & !show_if_not_deg & !!sym(gene_col) %in% hlf & DEG %in% c("UP", "DOWN") ~ !!sym(gene_col),
+        TRUE ~ NA
+      ),
+      color = case_when(
+        !is.na(highlight) & DEG == "UP" ~ color_gene_name_up,
+        !is.na(highlight) & DEG == "DOWN" ~ color_gene_name_down,
+        !is.na(highlight) & DEG == "NO" ~ color_gene_name_no,
+        TRUE ~ NA
+      )
+    )
+
+  set.seed(42) # gene name position
+
+  deg_plot <- ggplot()+
+    scale_x_discrete(limits = levels(chromoObject@data[[separate_by]])) + # fixes order of separate_by levels. NOTE: requires user to change separate_by into factor!
+    geom_bar(
+      data = compo_df,
+      aes(x = !!sym(separate_by), y = proportion, fill = DEG),
+      stat = "identity",
+      width = size_bar
+    ) +
+    scale_fill_manual(values = c("UP" = color_bar_up, "DOWN" = color_bar_down))
+
+  if(fc_line){
+    deg_plot <- deg_plot +
+      geom_hline(yintercept = chromoObject@classification$log2fc_cutoff, color = color_line_up, linewidth = size_line, linetype = style_line) +
+      geom_hline(yintercept = -chromoObject@classification$log2fc_cutoff, color = color_line_down, linewidth = size_line, linetype = style_line)
+  }
+
+  deg_plot <- deg_plot +
+    geom_jitter( # not DEGs
+      data = local_aux %>% filter(DEG == "NO"),
+      aes(x = !!sym(separate_by), y = !!sym(fc_col), color = DEG),
+      position = position_jitterdodge(
+        jitter.width = 0.4,
+        jitter.height = 0,
+        dodge.width = 0,
+        seed = 42
+      ),
+      size = size_dot_no
+    )+
+    geom_jitter( # DEGs
+      data = local_aux %>% filter(DEG %in% c("UP", "DOWN")),
+      aes(x = !!sym(separate_by), y = !!sym(fc_col), color = DEG),
+      position = position_jitterdodge(
+        jitter.width = 0.4,
+        jitter.height = 0,
+        dodge.width = 0,
+        seed = 42
+      ),
+      size = size_dot_alt
+    )+
+    labs(
+      x = title_xaxis,
+      y = title_yaxis
+    )+
+    scale_color_manual(values = c("DOWN" = color_dot_down, "NO" = color_dot_no, "UP" = color_dot_up)) +
+    theme(
+      panel.background = element_rect(fill = "white"),
+      panel.grid = element_blank(),
+      axis.text.x = element_text(color = color_xaxis_text, size = size_xaxis_text, face = style_xaxis_text),
+      axis.title.x = element_text(color = color_xaxis_label, size = size_xaxis_label, face = style_xaxis_label),
+      axis.text.y = element_text(color = color_yaxis_text, size = size_yaxis_text, face = style_yaxis_text),
+      axis.title.y = element_text(color = color_yaxis_label, size = size_yaxis_label, face = style_yaxis_label),
+      legend.position = "none"
+    )+
+    geom_text_repel(
+      data = local_aux,
+      aes(x = !!sym(separate_by), y = !!sym(fc_col), color = DEG, label = highlight),
+      max.overlaps = Inf,
+      color = local_aux$color,
+      size = size_gene_name,
+      fontface = style_gene_name
+    ) +
+    annotate( #score
+      geom = "text",
+      x = compo_df[[separate_by]],
+      y = compo_df$y_axis,
+      label = compo_df$compo,
+      color = compo_df$color,
+      size = size_score,
+      fontface = style_score
+    )
+
+  return(deg_plot)
 }
 
 
