@@ -274,6 +274,10 @@ chromoCompositionPlot <- function(
   compo_df <- compo_df %>%
     mutate(
       compo = case_when(
+        compo == 0 ~ min(compo[compo > 0], na.rm = TRUE),
+        TRUE ~ compo
+      ),
+      compo = case_when(
         chromoObject@composition$score_method %in% c("hyp","hyp_padj") ~ -log10(compo),
         TRUE ~ compo
       )
