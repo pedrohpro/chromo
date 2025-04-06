@@ -563,9 +563,9 @@ chromoDensity <- function(
 
     # Bands affected by each cluster
     DEG_clusters <- DEG_clusters %>%
-      mutate(cluster_num = seq(1, nrow(DEG_clusters))) %>%
       rowwise() %>%
       mutate(
+        cluster_num = row_number(),
         bands = {
           chr_val   <- as.character(.data[["chromosome"]])
           start_val <- as.numeric(.data[[start_position]])
