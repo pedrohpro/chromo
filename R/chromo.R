@@ -518,6 +518,7 @@ chromoDensity <- function(
     mutate(size = end_position - start_position)
 
   if(nrow(DEG_clusters) > 0){
+
     DEG_clusters$all_features <- NA
     DEG_clusters$DEGs <- NA
     for (i in 1:nrow(DEG_clusters)) {
@@ -536,54 +537,56 @@ chromoDensity <- function(
       mutate(
         n_features = str_count(all_features, ";") + 1,
         n_DEG = str_count(DEGs, ";") + 1
-      )
-
-    # Hypergeometric test
-    total_DEG <- DEdf %>% filter(!!sym(DEG) %in% DEG_type) %>% nrow()
-    total_no_DEG <- DEdf %>% filter(!!sym(DEG) == "NO") %>% nrow()
-
-    DEG_clusters$pval <- apply(DEG_clusters, 1, function(x){
-      phyper(
-        as.numeric(x[["n_DEG"]]) - 1,
-        total_DEG,
-        total_no_DEG,
-        as.numeric(x[["n_features"]]),
-        lower.tail = FALSE
-      )
-    })
-
-    # padj and score
-    DEG_clusters <- DEG_clusters %>%
-      mutate(
-        pval = p.adjust(DEG_clusters$pval, method = padj_method),
-        score = -log10(pval)
       ) %>%
-      arrange(-score) %>%
       filter(n_DEG > 1) # removing clusters with only 1 DEG
 
-    # Bands affected by each cluster
-    DEG_clusters <- DEG_clusters %>%
-      rowwise() %>%
-      mutate(
-        cluster_num = row_number(),
-        bands = {
-          chr_val   <- as.character(.data[["chromosome"]])
-          start_val <- as.numeric(.data[[start_position]])
-          end_val   <- as.numeric(.data[[end_position]])
+    if(nrow(DEG_clusters) > 0){
+      # Hypergeometric test
+      total_DEG <- DEdf %>% filter(!!sym(DEG) %in% DEG_type) %>% nrow()
+      total_no_DEG <- DEdf %>% filter(!!sym(DEG) == "NO") %>% nrow()
 
-          aux <- cytobands %>%
-            filter(
-              chr == chr_val,
-              (baseStart <= end_val & baseStart >= start_val) |
-                (baseEnd <= end_val & baseEnd >= start_val) |
-                (baseStart <= start_val & baseEnd >= end_val)
-            )
+      DEG_clusters$pval <- apply(DEG_clusters, 1, function(x){
+        phyper(
+          as.numeric(x[["n_DEG"]]) - 1,
+          total_DEG,
+          total_no_DEG,
+          as.numeric(x[["n_features"]]),
+          lower.tail = FALSE
+        )
+      })
 
-          paste(aux$band, collapse = ";")
-        }
-      ) %>%
-      ungroup() %>%
-      dplyr::select(cluster_num, chromosome, start_position, end_position, size, all_features, DEGs, n_features, n_DEG, pval, score, bands)
+      # padj and score
+      DEG_clusters <- DEG_clusters %>%
+        mutate(
+          pval = p.adjust(DEG_clusters$pval, method = padj_method),
+          score = -log10(pval)
+        ) %>%
+        arrange(-score)
+
+      # Bands affected by each cluster
+      DEG_clusters <- DEG_clusters %>%
+        rowwise() %>%
+        mutate(
+          cluster_num = row_number(),
+          bands = {
+            chr_val   <- as.character(.data[["chromosome"]])
+            start_val <- as.numeric(.data[[start_position]])
+            end_val   <- as.numeric(.data[[end_position]])
+
+            aux <- cytobands %>%
+              filter(
+                chr == chr_val,
+                (baseStart <= end_val & baseStart >= start_val) |
+                  (baseEnd <= end_val & baseEnd >= start_val) |
+                  (baseStart <= start_val & baseEnd >= end_val)
+              )
+
+            paste(aux$band, collapse = ";")
+          }
+        ) %>%
+        ungroup() %>%
+        dplyr::select(cluster_num, chromosome, start_position, end_position, size, all_features, DEGs, n_features, n_DEG, pval, score, bands)
+    }
   }
 
   chromoObject@density[[paste(DEG_type, collapse = ifelse(length(DEG_type) > 1, "_", ""))]] = list(
