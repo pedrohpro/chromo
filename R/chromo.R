@@ -559,6 +559,10 @@ chromoDensity <- function(
       DEG_clusters <- DEG_clusters %>%
         mutate(
           pval = p.adjust(DEG_clusters$pval, method = padj_method),
+          pval = case_when(
+            pval == 0 ~ min(pval[pval > 0], na.rm = TRUE),
+            TRUE ~ pval
+          ),
           score = -log10(pval)
         ) %>%
         arrange(-score)
