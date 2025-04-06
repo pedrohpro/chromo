@@ -614,7 +614,7 @@ chromoDensity <- function(
 chromoDensityPlot <- function(
     chromoObject,
     DEG_type = list("UP", "DOWN"), # list("UP", "DOWN"), "UP", "DOWN"
-    n_top_clusters = 10,
+    n_top_clusters = nrow(DEG_clusters),
     include_genes = F,
     include_density = T,
     all_chr = T,
@@ -646,6 +646,10 @@ chromoDensityPlot <- function(
   plot_color <- ifelse(length(DEG_type) == 2, color_enrich, ifelse("UP" %in% DEG_type, color_enrich_up, color_enrich_down))
 
   DEG_clusters <- chromoObject@density[[density_type]][["DEG_clusters"]]
+
+  if(nrow(DEG_clusters) == 0){
+    return(ggplot()) # return empty ggplot
+  }
 
   # top clusters and bands to include
   top_clusters <- DEG_clusters %>% arrange(-score) %>% head(n_top_clusters)
