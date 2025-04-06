@@ -560,10 +560,7 @@ chromoDensity <- function(
     arrange(-score) %>%
     filter(n_DEG > 1) # removing clusters with only 1 DEG
 
-  DEG_clusters <- DEG_clusters %>%
-    mutate(
-      cluster_num = seq(1,nrow(DEG_clusters))
-    )
+  DEG_clusters$cluster_num <- seq(1,nrow(DEG_clusters))
 
   # Bands affected by each cluster
   DEG_clusters <- DEG_clusters %>%
