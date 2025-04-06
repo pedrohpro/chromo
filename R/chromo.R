@@ -648,7 +648,7 @@ chromoDensityPlot <- function(
   DEG_clusters <- chromoObject@density[[density_type]][["DEG_clusters"]]
 
   if(nrow(DEG_clusters) == 0){
-    return(ggplot()) # return empty ggplot
+    return(ggplot() + theme_classic()) # return empty ggplot
   }
 
   # top clusters and bands to include
