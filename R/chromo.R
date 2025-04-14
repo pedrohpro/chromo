@@ -1042,7 +1042,7 @@ chromoORA <- function(
   aux <- aux@result %>% mutate(score = -log10(p.adjust))
 
   if(ont_type != "ALL"){
-    aux$Description <- ont_type
+    aux$ONTOLOGY <- ont_type
   }
 
   if(mt_density){
