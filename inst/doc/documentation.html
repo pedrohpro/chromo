@@ -427,10 +427,11 @@ evaluate DEG erichment.</span></p>
 list should contain the column names that specify the percentage of cell
 within each group that express that feature. Default value is set to
 Seurat column names.</span></p>
-<p><strong>score_method</strong> = “pct”, <span style="color:#aa0000;">This parameter specifies what enrichment method
+<p><strong>score_method</strong> = “hyp_padj”, <span style="color:#aa0000;">This parameter specifies what enrichment method
 to be used. It can be “pct” for percentage, “hyp” for hypergeometric
-test or “hyp_padj” for the adjusted pvalue calculated in the
-hypergeometric test.</span></p>
+test, “hyp_padj” for the adjusted pvalue calculated in the
+hypergeometric test, or “n_DEGs” for the total amount of
+DEGs.</span></p>
 <p><strong>padj_method</strong> = “BH” <span style="color:#aa0000;">This
 parameter defines which method to adjust the pvalue. Options are the
 existing parameters of the p.adjust() function. It will only be used if
@@ -571,8 +572,10 @@ inside a desired clusters.</span></p>
 the chromo object you are working with.</span></p>
 <p><strong>DEG_type</strong> = list(“UP”, “DOWN”), <span style="color:#aa0000;">Options are: c(“UP”, “DOWN”),
 “UP,”DOWN”</span></p>
-<p><strong>cluster</strong> = 1 <span style="color:#aa0000;">Which
+<p><strong>cluster</strong> = 1, <span style="color:#aa0000;">Which
 cluster to perfom ORA with.</span></p>
+<p><strong>ont_type</strong> = “BP” <span style="color:#aa0000;">Gene
+Ontology type. Options are: “BP”, “MF”, “CC”, “ALL”.</span></p>
 </div>
 <div id="chromooraplot" class="section level2">
 <h2>chromoORAPlot()</h2>

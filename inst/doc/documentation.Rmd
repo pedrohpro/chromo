@@ -93,10 +93,10 @@ true this 2 elements list should contain the column names that specify
 the percentage of cell within each group that express that feature.
 Default value is set to Seurat column names.]{style="color:#aa0000;"}
 
-**score_method** = "pct", [This parameter specifies what enrichment
+**score_method** = "hyp_padj", [This parameter specifies what enrichment
 method to be used. It can be "pct" for percentage, "hyp" for
-hypergeometric test or "hyp_padj" for the adjusted pvalue calculated in
-the hypergeometric test.]{style="color:#aa0000;"}
+hypergeometric test, "hyp_padj" for the adjusted pvalue calculated in
+the hypergeometric test, or "n_DEGs" for the total amount of DEGs.]{style="color:#aa0000;"}
 
 **padj_method** = "BH" [This parameter defines which method to adjust
 the pvalue. Options are the existing parameters of the p.adjust()
@@ -313,8 +313,10 @@ with.]{style="color:#aa0000;"}
 **DEG_type** = list("UP", "DOWN"), [Options are: c("UP", "DOWN"), "UP,
 "DOWN"]{style="color:#aa0000;"}
 
-**cluster** = 1 [Which cluster to perfom ORA
+**cluster** = 1, [Which cluster to perfom ORA
 with.]{style="color:#aa0000;"}
+
+**ont_type** = "BP" [Gene Ontology type. Options are: "BP", "MF", "CC", "ALL".]{style="color:#aa0000;"}
 
 ## chromoORAPlot()
 

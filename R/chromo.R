@@ -145,14 +145,14 @@ chromoComposition <- function(
     separate_by = "chromosome_name", #separate group
     only_expr_features = F,
     pct_expr_cols = c("pct.1", "pct.2"), # seurat
-    score_method = "pct", # "pct" or "hyp" or "hyp_padj"
+    score_method = "hyp_padj", # "pct", "hyp", "hyp_padj", "n_DEGs"
     padj_method = "BH" # existing params of p.adjust() function # only if using "hyp_padj"
 ){
 
   aux <- chromoObject@data %>%
     {if (only_expr_features) filter(., !!sym(pct_expr_cols[[1]]) + !!sym(pct_expr_cols[[2]]) != 0) else .}
 
-  if(score_method == "pct"){
+  if(score_method %in% c("pct", "n_DEGs")){
     compo_df <- aux %>%
       group_by(!!sym(separate_by), DEG) %>%
       summarise(total = n()) %>%
@@ -164,6 +164,10 @@ chromoComposition <- function(
       filter(
         DEG != "NO"
       )
+
+    if(score_method == "n_DEGs"){
+      compo_df$compo <- compo_df$total
+    }
 
   }else if(score_method %in% c("hyp","hyp_padj")){
     compo_df <- aux %>%
@@ -1002,6 +1006,7 @@ chromoORA <- function(
     chromoObject,
     DEG_type = list("UP", "DOWN"), # list("UP", "DOWN"), "UP", "DOWN"
     cluster = 1,
+    ont_type = "BP", # "BP", "CC", "MF", "ALL"
     mt_density = F
 ){
 
@@ -1028,16 +1033,22 @@ chromoORA <- function(
     gene = DEGs_in_cluster,
     universe = chromoObject@data[, chromoObject@columns$gene_col, drop = T],
     OrgDb = org.Hs.eg.db,
-    ont = "all",
+    ont = ont_type,
     pvalueCutoff = 0.05,
     qvalueCutoff = 0.05,
     readable = TRUE
   )
 
+  aux <- aux@result %>% mutate(score = -log10(p.adjust))
+
+  if(ont_type != "ALL"){
+    aux$Description <- ont_type
+  }
+
   if(mt_density){
-    chromoObject@ora$MT[[density_type]][[cluster]] <- aux@result %>% mutate(score = -log10(p.adjust))
+    chromoObject@ora$MT[[density_type]][[cluster]] <- aux)
   }else{
-    chromoObject@ora[[density_type]][[cluster]] <- aux@result %>% mutate(score = -log10(p.adjust))
+    chromoObject@ora[[density_type]][[cluster]] <- aux)
   }
 
   return(chromoObject)
