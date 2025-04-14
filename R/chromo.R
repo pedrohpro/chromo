@@ -290,6 +290,7 @@ chromoCompositionPlot <- function(
   max_compo <- max(compo_df$compo, na.rm = T)
 
   compo_df <- compo_df %>%
+    ungroup() %>%
     mutate(
       proportion = (compo/max_compo * (max(abs(aux[[fc_col]])))),
       proportion = case_when(
@@ -300,7 +301,7 @@ chromoCompositionPlot <- function(
       compo = case_when(
         chromoObject@composition$score_method %in% c("hyp","hyp_padj") ~ ifelse(compo > -log10(0.001),"***",ifelse(compo > -log10(0.01),"**",ifelse(compo > -log10(0.05),"*",""))),
         chromoObject@composition$score_method == "pct" ~ paste0(round(compo, 1), "%"),
-        TRUE ~ compo
+        TRUE ~ as.character(compo)
       ),
       y_axis = case_when(
         DEG == "UP" ~ 1.2 * max(aux[[fc_col]]),
