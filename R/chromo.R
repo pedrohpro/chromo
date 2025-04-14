@@ -1046,9 +1046,9 @@ chromoORA <- function(
   }
 
   if(mt_density){
-    chromoObject@ora$MT[[density_type]][[cluster]] <- aux)
+    chromoObject@ora$MT[[density_type]][[cluster]] <- aux
   }else{
-    chromoObject@ora[[density_type]][[cluster]] <- aux)
+    chromoObject@ora[[density_type]][[cluster]] <- aux
   }
 
   return(chromoObject)
