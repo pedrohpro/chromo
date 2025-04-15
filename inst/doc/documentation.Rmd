@@ -250,7 +250,11 @@ curve.]{style="color:#aa0000;"}
 
 **color_enrich_up** = "#dd2200",
 
-**color_enrich_down** = "#0022dd"
+**color_enrich_down** = "#0022dd",
+
+**size_chr_name** = 18,
+
+**size_cluster_name** = 6
 
 ## chromoZoom()
 

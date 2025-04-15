@@ -627,7 +627,10 @@ chromoDensityPlot <- function(
 
     color_enrich = "#990099",
     color_enrich_up = "#dd2200",
-    color_enrich_down = "#0022dd"
+    color_enrich_down = "#0022dd",
+
+    size_chr_name = 18,
+    size_cluster_name = 6
 ){
 
   gene_col <- chromoObject@columns$gene_col
@@ -699,7 +702,7 @@ chromoDensityPlot <- function(
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         axis.line = element_line(color = "black", linewidth = 0.5),
-        axis.title.y = element_text(face = "bold", size = 20, angle = 0, vjust = 0.5),
+        axis.title.y = element_text(face = "bold", size = size_chr_name, angle = 0, vjust = 0.5),
         axis.text.y = element_blank(),
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
@@ -819,7 +822,7 @@ chromoDensityPlot <- function(
           y = -0.5,
           label = j,
           color = "black",
-          size = 6,
+          size = size_cluster_name,
           fontface = "bold"
         )
     }
