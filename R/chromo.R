@@ -73,17 +73,15 @@ chromoInitiate <- function(
       chromosome_name %in% c(as.character(seq(1, 22)), "X", "Y", "MT")
     ) %>%
     {
-      if (!is.null(celltype_col)) { # single cell combined
-        dplyr::filter(
+      if (!is.null(celltype_col)) {
+        filter(
           .,
-          !duplicated(interaction(!!sym(gene_col), chromosome_name, !!sym(celltype_col))) |
-          !duplicated(interaction(!!sym(gene_col), chromosome_name, !!sym(celltype_col)), fromLast = TRUE)
+          !duplicated(interaction(!!sym(gene_col), chromosome_name, !!sym(celltype_col)))
         )
       } else {
-        dplyr::filter(
+        filter(
           .,
-          !duplicated(interaction(!!sym(gene_col), chromosome_name)) |
-          !duplicated(interaction(!!sym(gene_col), chromosome_name), fromLast = TRUE)
+          !duplicated(interaction(!!sym(gene_col), chromosome_name))
         )
       }
     } %>%
