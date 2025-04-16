@@ -45,7 +45,7 @@ in your data frame.]{style="color:#aa0000;"}
 **p_col**, [This is the name of the p value containing column in your
 data frame.]{style="color:#aa0000;"}
 
-**keep_rep_feat** = F, [To remove repeated features. When separating by chromosome this MUST be FALSE. When separating by cell type this MUST be TRUE.]{style="color:#aa0000;"}
+**celltype_col** = NULL, [Use only if multiple DEdf from different celltypes are combined.]{style="color:#aa0000;"}
 
 **transcript_type** =
 c("Mt_tRNA","Mt_rRNA","protein_coding","lncRNA","snRNA","rRNA","pseudogene","misc_RNA","processed_pseudogene",

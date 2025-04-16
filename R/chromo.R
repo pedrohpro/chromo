@@ -51,7 +51,7 @@ chromoInitiate <- function(
     gene_col,
     fc_col,
     p_col,
-    keep_rep_feat = F,
+    celltype_col = NULL,
     transcript_type = c("Mt_tRNA","Mt_rRNA","protein_coding","lncRNA","snRNA","rRNA","pseudogene","misc_RNA","processed_pseudogene",
                         "transcribed_unprocessed_pseudogene","rRNA_pseudogene","unprocessed_pseudogene","TEC","miRNA","transcribed_processed_pseudogene",
                         "snoRNA","unitary_pseudogene","transcribed_unitary_pseudogene","sRNA","IG_V_gene","IG_C_pseudogene","TR_J_gene",
@@ -73,9 +73,19 @@ chromoInitiate <- function(
       chromosome_name %in% c(as.character(seq(1, 22)), "X", "Y", "MT")
     ) %>%
     {
-      if (!keep_rep_feat) {
-        dplyr::filter(., !duplicated(!!sym(gene_col)) | !duplicated(!!sym(gene_col), fromLast = TRUE))
-      } else {.}
+      if (!is.null(celltype_col)) { # single cell combined
+        dplyr::filter(
+          .,
+          !duplicated(interaction(!!sym(gene_col), chromosome_name, !!sym(celltype_col))) |
+          !duplicated(interaction(!!sym(gene_col), chromosome_name, !!sym(celltype_col)), fromLast = TRUE)
+        )
+      } else {
+        dplyr::filter(
+          .,
+          !duplicated(interaction(!!sym(gene_col), chromosome_name)) |
+          !duplicated(interaction(!!sym(gene_col), chromosome_name), fromLast = TRUE)
+        )
+      }
     } %>%
     dplyr::mutate(
       chromosome_name = factor(chromosome_name, levels = c(as.character(seq(1, 22)), "X", "Y", "MT")),
