@@ -368,7 +368,9 @@ containing a tutorial on Down Syndrome data.</span></p>
 <div id="chromoinitiate" class="section level2">
 <h2>chromoInitiate()</h2>
 <p><span style="color:#00aa33;">This function creates your chromo object
-instance.</span></p>
+instance. <strong>NOTE:</strong> some genes are present in more than one
+chromosome; therefore, for correct density estimations <span class="citation">@data</span> may have more rows than your original
+DEdf!</span></p>
 <p><strong>DEdf</strong>, <span style="color:#aa0000;">This is the
 differential expression data frame containing at least the 3 required
 columns (gene name, log2fc, pvalue).</span></p>

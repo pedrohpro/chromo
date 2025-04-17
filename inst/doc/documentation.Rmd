@@ -23,7 +23,7 @@ Syndrome data.]{style="color:#00aa33;"}
 
 ## chromoInitiate()
 
-[This function creates your chromo object instance.]{style="color:#00aa33;"} 
+[This function creates your chromo object instance. **NOTE:** some genes are present in more than one chromosome; therefore, for correct density estimations @data may have more rows than your original DEdf!]{style="color:#00aa33;"} 
 
 **DEdf**, [This is the differential
 expression data frame containing at least the 3 required columns (gene
