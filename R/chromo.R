@@ -76,7 +76,7 @@ chromoInitiate <- function(
       if (!is.null(celltype_col)) {
         filter(
           .,
-          !duplicated(interaction(!!sym(gene_col), chromosome_name, !!sym(celltype_col)))
+          !duplicated(interaction(!!sym(gene_col), chromosome_name, !!sym(celltype_col))) # NOTE: some genes are in more than one chromosome!!! This preserves them!
         )
       } else {
         filter(
