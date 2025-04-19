@@ -903,6 +903,7 @@ chromoZoom <- function(
     cluster_df <- chromoObject@density$MT[[density_type]]$DEG_clusters %>% filter(cluster_num == cluster)
   }else{
     cluster_df <- chromoObject@density[[density_type]]$DEG_clusters %>% filter(cluster_num == cluster)
+    bands <- unlist(strsplit(cluster_df[["bands"]], ";"))
   }
 
   features_in_cluster <- unlist(strsplit(cluster_df[["all_features"]], ";"))
@@ -915,6 +916,7 @@ chromoZoom <- function(
   min_fc <- min(fc_vector)
   size_adj <- (max_fc - min_fc)/30
 
+  # Plot
   zoom_plot <- ggplot() +
     labs(
       title = paste0(
@@ -927,7 +929,10 @@ chromoZoom <- function(
       y = "Log2 fold change"
     ) +
     scale_y_continuous(expand = c(0, 0), limits = c(min_fc - 4*size_adj, max_fc), breaks = seq(ceiling(min_fc), floor(max_fc), 1)) +
-    scale_x_continuous(expand = c(0, 0), labels = custom_labels) +
+    scale_x_continuous(expand = c(0, 0), labels = custom_labels, limits = c(
+      min(cytobands %>% filter(band %in% bands) %>% pull(baseStart)),
+      max(cytobands %>% filter(band %in% bands) %>% pull(baseEnd))
+    )) +
     theme(
       panel.background = element_rect(fill = "white"),
       panel.grid = element_blank(),
@@ -935,7 +940,7 @@ chromoZoom <- function(
       axis.title.x = element_text(color = color_xaxis_label, size = size_xaxis_label, face = style_xaxis_label),
       axis.text.y = element_text(color = color_yaxis_text, size = size_yaxis_text, face = style_yaxis_text),
       axis.title.y = element_text(color = color_yaxis_label, size = size_yaxis_label, face = style_yaxis_label),
-      legend.position = "none" # Remove legends
+      legend.position = "none"
     ) +
     geom_vline(xintercept = cluster_df[["start_position"]], color = "#dddd00", size = size_line, linetype = style_line) +
     geom_vline(xintercept = cluster_df[["end_position"]], color = "#dddd00", size = size_line, linetype = style_line) +
@@ -945,7 +950,6 @@ chromoZoom <- function(
 
   # Bands
   if(!mt_density){
-    bands <- unlist(strsplit(cluster_df[["bands"]], ";"))
     for(i in bands){
       zoom_plot <- zoom_plot +
         annotate(
